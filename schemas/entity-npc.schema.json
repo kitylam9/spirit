@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spirit.game/schemas/entity-npc.schema.json",
+  "title": "NPC",
+  "description": "A non-player character created by the NPC agent. The same agent role-plays the NPC in dialogue using this record as its character sheet.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "name", "planetId", "regionId", "species", "role", "age", "appearance", "personality", "goals", "knowledge", "relationships"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "id": { "type": "string", "pattern": "^npc-[a-z0-9-]+$" },
+    "name": { "type": "string", "maxLength": 60 },
+    "planetId": { "type": "string", "pattern": "^planet-[a-z0-9-]+$" },
+    "regionId": { "type": "string", "pattern": "^region-[a-z0-9-]+$" },
+    "homeSceneId": { "type": "string", "pattern": "^scene-[a-z0-9-]+$" },
+    "species": { "type": "string", "maxLength": 40 },
+    "vesselKind": { "type": "string", "enum": ["humanoid", "animal", "android", "hive-drone", "uploaded-mind", "other"], "default": "humanoid" },
+    "role": { "type": "string", "maxLength": 60 },
+    "socialClass": { "type": "string", "maxLength": 40 },
+    "factionId": { "type": "string", "pattern": "^faction-[a-z0-9-]+$" },
+    "age": { "type": "integer", "minimum": 0, "maximum": 1000 },
+    "appearance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["description"],
+      "properties": {
+        "description": { "type": "string", "maxLength": 300 },
+        "bodyAssetRef": { "type": "string", "pattern": "^asset-[a-z0-9-]+$" },
+        "bodyAssetRequest": { "type": "string", "maxLength": 120 },
+        "tint": { "type": "array", "items": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }, "maxItems": 3 },
+        "portraitPrompt": { "type": "string", "maxLength": 300, "description": "Optional prompt for a future 2D portrait generator." }
+      }
+    },
+    "personality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["traits", "speechStyle", "values"],
+      "properties": {
+        "traits": { "type": "array", "items": { "type": "string", "maxLength": 30 }, "minItems": 2, "maxItems": 6 },
+        "speechStyle": { "type": "string", "maxLength": 200 },
+        "values": { "type": "array", "items": { "type": "string", "maxLength": 60 }, "minItems": 1, "maxItems": 4 },
+        "fears": { "type": "array", "items": { "type": "string", "maxLength": 60 }, "maxItems": 4 },
+        "secret": { "type": "string", "maxLength": 200 }
+      }
+    },
+    "goals": { "type": "array", "items": { "type": "string", "maxLength": 160 }, "minItems": 1, "maxItems": 4 },
+    "knowledge": {
+      "type": "array",
+      "description": "Facts this NPC knows and may reveal. NPCs must not reveal facts outside this list and public canon.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["fact", "willingness"],
+        "properties": {
+          "fact": { "type": "string", "maxLength": 200 },
+          "willingness": { "type": "string", "enum": ["freely", "if-trusted", "if-paid", "under-duress", "never"] }
+        }
+      },
+      "maxItems": 12
+    },
+    "relationships": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["targetId", "kind", "opinion"],
+        "properties": {
+          "targetId": { "type": "string", "pattern": "^(npc|faction|player)-[a-z0-9-]+$" },
+          "kind": { "type": "string", "enum": ["family", "friend", "lover", "rival", "enemy", "employer", "employee", "mentor", "student", "neighbor", "acquaintance"] },
+          "opinion": { "type": "integer", "minimum": -100, "maximum": 100 }
+        }
+      }
+    },
+    "schedule": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["fromHour", "toHour", "activity"],
+        "properties": {
+          "fromHour": { "type": "number", "minimum": 0, "maximum": 24 },
+          "toHour": { "type": "number", "minimum": 0, "maximum": 24 },
+          "sceneId": { "type": "string", "pattern": "^scene-[a-z0-9-]+$" },
+          "activity": { "type": "string", "enum": ["sleep", "work", "eat", "socialize", "pray", "patrol", "trade", "travel", "rest", "study"] }
+        }
+      }
+    },
+    "inventory": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["itemId", "name", "qty"],
+        "properties": {
+          "itemId": { "type": "string", "pattern": "^item-[a-z0-9-]+$" },
+          "name": { "type": "string", "maxLength": 60 },
+          "qty": { "type": "integer", "minimum": 0 },
+          "value": { "type": "number", "minimum": 0, "description": "Price in civilization currency units." },
+          "forSale": { "type": "boolean" }
+        }
+      }
+    },
+    "stats": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "health": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "combat": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "wealth": { "type": "integer", "minimum": 0, "maximum": 10 }
+      }
+    },
+    "greeting": { "type": "string", "maxLength": 200, "description": "First line when the player approaches, in character." }
+  }
+}

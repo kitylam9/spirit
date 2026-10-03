@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "1.0",
+  "id": "asset-ph-wooden-cart",
+  "name": "Wooden Cart",
+  "kind": "model",
+  "source": {
+    "name": "polyhaven",
+    "sourceId": "wooden_cart",
+    "url": "https://polyhaven.com/a/wooden_cart"
+  },
+  "license": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "author": "Poly Haven",
+    "authorUrl": "https://polyhaven.com",
+    "attribution": "Wooden Cart by Poly Haven (CC0)",
+    "retrievedAt": "2026-10-03T18:00:00Z",
+    "verifiedAt": "2026-10-03T18:00:05Z"
+  },
+  "tags": ["cart", "wood", "medieval", "farm", "prop"],
+  "tiers": ["T1", "T2", "T3", "T4"],
+  "biomes": ["plains", "river-valley", "forest"],
+  "style": "realistic",
+  "bounds": { "size": [3.0, 1.2, 1.4], "pivot": "bottom-center" },
+  "scaleApplied": 1,
+  "rigged": false,
+  "animations": [],
+  "files": {
+    "primary": {
+      "url": "https://cdn.spirit.game/assets/3b/3b9f.../wooden-cart.glb",
+      "bytes": 2483021,
+      "sha256": "3b9f4c1e7a2d0b5f6e8c9a1d2b3c4e5f60718293a4b5c6d7e8f90123456789ab",
+      "mime": "model/gltf-binary"
+    },
+    "lods": [
+      { "level": 0, "url": "https://cdn.spirit.game/assets/3b/3b9f.../wooden-cart-lod0.glb", "triangles": 12400, "bytes": 2483021, "maxDistance": 15 },
+      { "level": 1, "url": "https://cdn.spirit.game/assets/3b/3b9f.../wooden-cart-lod1.glb", "triangles": 3700, "bytes": 812044, "maxDistance": 40 },
+      { "level": 2, "url": "https://cdn.spirit.game/assets/3b/3b9f.../wooden-cart-lod2.glb", "triangles": 1200, "bytes": 301876 }
+    ],
+    "thumbnail": {
+      "url": "https://cdn.spirit.game/assets/3b/3b9f.../thumb.webp",
+      "bytes": 24310,
+      "sha256": "a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0",
+      "mime": "image/webp"
+    }
+  },
+  "quality": {
+    "triangles": 12400,
+    "maxTextureSize": 2048,
+    "pbrChannels": ["baseColor", "normal", "metallicRoughness", "occlusion"],
+    "score": 0.88
+  },
+  "ingest": {
+    "pipelineVersion": "1.0.0",
+    "ingestedAt": "2026-10-03T18:01:12Z",
+    "steps": ["download", "validate", "normalize", "dedup", "prune", "weld", "simplify-lods", "meshopt", "ktx2", "thumbnail", "publish"],
+    "requestedBy": "scene-millford-market"
+  }
+}

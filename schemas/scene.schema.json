@@ -1,0 +1,277 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spirit.game/schemas/scene.schema.json",
+  "title": "Scene",
+  "description": "A loadable 3D scene produced by the Scene Designer agent and rendered by the Three.js client. Units: meters, radians, +Y up.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "planetId", "regionId", "name", "description", "tier", "stylePreference", "bounds", "environment", "budget", "instances", "spawnPoints", "exits"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "id": { "type": "string", "pattern": "^scene-[a-z0-9-]+$" },
+    "planetId": { "type": "string", "pattern": "^planet-[a-z0-9-]+$" },
+    "regionId": { "type": "string", "pattern": "^region-[a-z0-9-]+$" },
+    "name": { "type": "string", "maxLength": 60 },
+    "description": { "type": "string", "maxLength": 600 },
+    "tier": { "type": "string", "enum": ["T0", "T1", "T2", "T3", "T4", "T5", "T6", "T7"] },
+    "stylePreference": { "type": "string", "enum": ["realistic", "stylized", "low-poly"] },
+    "indoor": { "type": "boolean", "default": false },
+    "bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sizeX", "sizeZ"],
+      "properties": {
+        "sizeX": { "type": "number", "minimum": 10, "maximum": 2000 },
+        "sizeZ": { "type": "number", "minimum": 10, "maximum": 2000 },
+        "maxHeight": { "type": "number", "minimum": 3, "maximum": 1000 }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["terrain", "sky", "lighting"],
+      "properties": {
+        "terrain": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "material"],
+          "properties": {
+            "kind": { "type": "string", "enum": ["flat", "heightmap", "floor"] },
+            "seed": { "type": "string", "pattern": "^[0-9a-f]{16}$" },
+            "amplitude": { "type": "number", "minimum": 0, "maximum": 200 },
+            "roughness": { "type": "number", "minimum": 0, "maximum": 1 },
+            "material": { "type": "string", "maxLength": 40, "description": "Material keyword resolved to a PBR material asset (e.g. 'grass', 'cobblestone', 'metal-grate')." },
+            "materialAssetRef": { "$ref": "#/$defs/assetId" }
+          }
+        },
+        "sky": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "timeOfDay"],
+          "properties": {
+            "kind": { "type": "string", "enum": ["hdri", "procedural", "interior"] },
+            "hdriAssetRef": { "$ref": "#/$defs/assetId" },
+            "timeOfDay": { "type": "number", "minimum": 0, "maximum": 24 },
+            "cloudCover": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "fog": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["color", "density"],
+          "properties": {
+            "color": { "$ref": "#/$defs/hexColor" },
+            "density": { "type": "number", "minimum": 0, "maximum": 0.1 }
+          }
+        },
+        "lighting": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sun", "ambient"],
+          "properties": {
+            "sun": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["color", "intensity", "elevation", "azimuth"],
+              "properties": {
+                "color": { "$ref": "#/$defs/hexColor" },
+                "intensity": { "type": "number", "minimum": 0, "maximum": 10 },
+                "elevation": { "type": "number", "minimum": -1.6, "maximum": 1.6 },
+                "azimuth": { "type": "number", "minimum": 0, "maximum": 6.2832 },
+                "castShadows": { "type": "boolean" }
+              }
+            },
+            "ambient": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["color", "intensity"],
+              "properties": {
+                "color": { "$ref": "#/$defs/hexColor" },
+                "intensity": { "type": "number", "minimum": 0, "maximum": 5 }
+              }
+            },
+            "pointLights": {
+              "type": "array",
+              "maxItems": 16,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["position", "color", "intensity", "range"],
+                "properties": {
+                  "position": { "$ref": "#/$defs/vec3" },
+                  "color": { "$ref": "#/$defs/hexColor" },
+                  "intensity": { "type": "number", "minimum": 0, "maximum": 50 },
+                  "range": { "type": "number", "minimum": 0.5, "maximum": 200 },
+                  "flicker": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "weather": { "type": "string", "enum": ["clear", "cloudy", "rain", "storm", "snow", "fog", "dust", "acid-rain", "none"] },
+        "ambientAudio": { "type": "array", "items": { "type": "string", "maxLength": 40 }, "maxItems": 4, "description": "Audio keywords resolved to audio assets (e.g. 'market-crowd', 'rain-on-roof')." }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxTriangles", "maxInstances"],
+      "properties": {
+        "maxTriangles": { "type": "integer", "minimum": 10000, "maximum": 300000 },
+        "maxInstances": { "type": "integer", "minimum": 1, "maximum": 2000 },
+        "maxNewAssets": { "type": "integer", "minimum": 0, "maximum": 8 }
+      }
+    },
+    "instances": {
+      "type": "array",
+      "maxItems": 400,
+      "items": { "$ref": "#/$defs/instance" }
+    },
+    "spawnPoints": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "position"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^spawn-[a-z0-9-]+$" },
+          "position": { "$ref": "#/$defs/vec3" },
+          "rotationY": { "type": "number" },
+          "purpose": { "type": "string", "enum": ["player", "birth", "arrival", "return"] }
+        }
+      }
+    },
+    "npcSpawns": {
+      "type": "array",
+      "maxItems": 40,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["position", "behavior"],
+        "properties": {
+          "npcId": { "type": "string", "pattern": "^npc-[a-z0-9-]+$" },
+          "roleHint": { "type": "string", "maxLength": 60, "description": "When npcId is absent, the NPC agent creates an NPC matching this role." },
+          "position": { "$ref": "#/$defs/vec3" },
+          "behavior": { "type": "string", "enum": ["idle", "wander", "work", "patrol", "sit", "sell", "guard", "follow-schedule"] }
+        },
+        "anyOf": [{ "required": ["npcId"] }, { "required": ["roleHint"] }]
+      }
+    },
+    "interactables": {
+      "type": "array",
+      "maxItems": 60,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "instanceId", "label", "verbs"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^int-[a-z0-9-]+$" },
+          "instanceId": { "type": "string", "pattern": "^inst-[a-z0-9-]+$" },
+          "label": { "type": "string", "maxLength": 60 },
+          "verbs": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string", "enum": ["look", "take", "use", "eat", "rest", "work", "craft", "learn", "hide", "buy", "sell"] }
+          },
+          "itemId": { "type": "string", "pattern": "^item-[a-z0-9-]+$" }
+        }
+      }
+    },
+    "exits": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "position", "to"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^exit-[a-z0-9-]+$" },
+          "label": { "type": "string", "maxLength": 60 },
+          "position": { "$ref": "#/$defs/vec3" },
+          "radius": { "type": "number", "minimum": 0.5, "maximum": 20 },
+          "to": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "sceneId": { "type": "string", "pattern": "^scene-[a-z0-9-]+$" },
+              "regionId": { "type": "string", "pattern": "^region-[a-z0-9-]+$" },
+              "pending": { "type": "boolean", "description": "True if the target scene does not exist yet; the Director will schedule it." }
+            },
+            "anyOf": [{ "required": ["sceneId"] }, { "required": ["regionId"] }]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "vec3": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+    "hexColor": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+    "assetId": { "type": "string", "pattern": "^asset-[a-z0-9-]+$" },
+    "transform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["position"],
+      "properties": {
+        "position": { "$ref": "#/$defs/vec3" },
+        "rotationY": { "type": "number", "default": 0 },
+        "rotation": { "$ref": "#/$defs/vec3", "description": "Euler XYZ, overrides rotationY when present." },
+        "scale": { "type": "number", "exclusiveMinimum": 0, "maximum": 100, "default": 1 }
+      }
+    },
+    "procedural": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["box", "cylinder", "sphere", "cone", "plane", "capsule", "building-block", "tree", "rock", "fence", "stall", "crate", "lamp"] },
+        "size": { "$ref": "#/$defs/vec3" },
+        "material": { "type": "string", "maxLength": 40 },
+        "color": { "$ref": "#/$defs/hexColor" }
+      }
+    },
+    "assetRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["query", "expectedSize"],
+      "properties": {
+        "query": { "type": "string", "maxLength": 120 },
+        "expectedSize": { "$ref": "#/$defs/vec3", "description": "Approximate real-world size in meters (x, y, z)." },
+        "style": { "type": "string", "enum": ["realistic", "stylized", "low-poly"] },
+        "maxTriangles": { "type": "integer", "minimum": 100, "maximum": 100000 },
+        "animated": { "type": "boolean" },
+        "tags": { "type": "array", "items": { "type": "string", "maxLength": 30 }, "maxItems": 8 }
+      }
+    },
+    "instance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "transform"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^inst-[a-z0-9-]+$" },
+        "label": { "type": "string", "maxLength": 60 },
+        "assetRef": { "$ref": "#/$defs/assetId" },
+        "assetRequest": { "$ref": "#/$defs/assetRequest" },
+        "procedural": { "$ref": "#/$defs/procedural" },
+        "transform": { "$ref": "#/$defs/transform" },
+        "count": { "type": "integer", "minimum": 1, "maximum": 200, "description": "If > 1, scatter copies within scatterRadius (instanced)." },
+        "scatterRadius": { "type": "number", "minimum": 0, "maximum": 500 },
+        "placement": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "snapToGround": { "type": "boolean", "default": true },
+            "collider": { "type": "string", "enum": ["none", "box", "convex", "mesh"], "default": "box" },
+            "avoidOverlap": { "type": "boolean", "default": true }
+          }
+        }
+      },
+      "anyOf": [
+        { "required": ["assetRef"] },
+        { "required": ["assetRequest", "procedural"] },
+        { "required": ["procedural"] }
+      ]
+    }
+  }
+}

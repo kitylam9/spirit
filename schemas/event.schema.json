@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spirit.game/schemas/event.schema.json",
+  "title": "Event",
+  "description": "A story event produced by the Narrative agent. Choices map to verbs; effects are applied (and clamped) by the rules engine.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "planetId", "kind", "title", "text", "pacing", "trigger"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "id": { "type": "string", "pattern": "^evt-[a-z0-9-]+$" },
+    "planetId": { "type": "string", "pattern": "^planet-[a-z0-9-]+$" },
+    "regionId": { "type": "string", "pattern": "^region-[a-z0-9-]+$" },
+    "kind": { "type": "string", "enum": ["world", "local", "personal", "goal", "omen", "epitaph"] },
+    "title": { "type": "string", "maxLength": 80 },
+    "text": { "type": "string", "maxLength": 1200 },
+    "pacing": { "type": "string", "enum": ["calm", "rising", "climax", "resolution"] },
+    "involvedNpcIds": { "type": "array", "items": { "type": "string", "pattern": "^npc-[a-z0-9-]+$" }, "maxItems": 6 },
+    "trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "enum": ["immediate", "at-tick", "on-enter-scene", "condition"] },
+        "atTick": { "type": "integer", "minimum": 0 },
+        "sceneId": { "type": "string", "pattern": "^scene-[a-z0-9-]+$" },
+        "conditions": { "type": "array", "items": { "$ref": "#/$defs/condition" }, "maxItems": 4 }
+      }
+    },
+    "choices": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "action"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^choice-[a-z0-9-]+$" },
+          "label": { "type": "string", "maxLength": 80 },
+          "hint": { "type": "string", "maxLength": 120 },
+          "action": { "$ref": "#/$defs/action" },
+          "requires": { "type": "array", "items": { "$ref": "#/$defs/condition" }, "maxItems": 3 },
+          "effects": { "type": "array", "items": { "$ref": "#/$defs/effect" }, "maxItems": 6 },
+          "followUp": { "type": "string", "maxLength": 300, "description": "Short outcome text shown after choosing." }
+        }
+      }
+    },
+    "effects": {
+      "description": "Effects applied when the event triggers, regardless of choice.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/effect" },
+      "maxItems": 6
+    },
+    "expiresInTicks": { "type": "integer", "minimum": 1 },
+    "goal": {
+      "type": "object",
+      "description": "Only for kind=goal.",
+      "additionalProperties": false,
+      "required": ["id", "title", "successConditions"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^goal-[a-z0-9-]+$" },
+        "title": { "type": "string", "maxLength": 80 },
+        "successConditions": { "type": "array", "items": { "$ref": "#/$defs/condition" }, "minItems": 1, "maxItems": 4 },
+        "fulfillment": { "type": "integer", "minimum": 1, "maximum": 40 }
+      }
+    },
+    "canonFacts": {
+      "description": "Atomic facts this event establishes if it happens.",
+      "type": "array",
+      "items": { "type": "string", "maxLength": 200 },
+      "maxItems": 6
+    }
+  },
+  "$defs": {
+    "statPath": {
+      "type": "string",
+      "description": "Paths mirror player-state.schema.json with /player as the root, plus world faction power.",
+      "pattern": "^/(player/incarnation/stats/(health|hunger|energy|exposure|reputation|wealth|resolve|insight)|player/spirit/energy|player/incarnation/relationships/npc-[a-z0-9-]+|player/incarnation/legalStatus|player/incarnation/inventory/item-[a-z0-9-]+|player/incarnation/goals/goal-[a-z0-9-]+|world/factions/faction-[a-z0-9-]+/power)$"
+    },
+    "condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "op", "value"],
+      "properties": {
+        "path": { "$ref": "#/$defs/statPath" },
+        "op": { "type": "string", "enum": ["<", "<=", "==", ">=", ">", "!="] },
+        "value": { "type": ["number", "string", "boolean"] }
+      }
+    },
+    "effect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "op", "value"],
+      "properties": {
+        "path": { "$ref": "#/$defs/statPath" },
+        "op": { "type": "string", "enum": ["add", "set"] },
+        "value": { "type": ["number", "string", "boolean"] }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verb"],
+      "properties": {
+        "verb": {
+          "type": "string",
+          "enum": ["move", "look", "talk", "give", "take", "use", "buy", "sell", "work", "rest", "eat", "attack", "flee", "hide", "craft", "learn", "travel", "incarnate.request", "reflect.choose", "travel.request", "ui.close", "ui.open", "ui.tab"]
+        },
+        "params": { "type": "object", "additionalProperties": { "type": ["string", "number", "boolean"] } }
+      }
+    }
+  }
+}

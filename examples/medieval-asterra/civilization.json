@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "1.0",
+  "id": "civ-asterran-realm",
+  "planetId": "planet-asterra",
+  "name": "The Asterran Realm",
+  "tier": "T2",
+  "techProfile": {
+    "agriculture": "T2",
+    "energy": "T2",
+    "medicine": "T1",
+    "weapons": "T2",
+    "communication": "T2",
+    "transport": "T2",
+    "computing": "T1"
+  },
+  "summary": "A feudal patchwork of river valleys ruled by Lord Brannoc under a distant king. Peasants farm and mill, guilds control trade, and the Chapel of the Twin Lights interprets the will of the moons. Medicine is mostly prayer and herb-lore, which makes the new sickness terrifying.",
+  "population": "about 40,000 in the valley",
+  "government": {
+    "type": "feudal-monarchy",
+    "ruler": "Lord Aldric Brannoc, vassal of King Oswin III",
+    "description": "Land is held in oath from the lord; reeves govern villages; justice is the lord's court."
+  },
+  "economy": {
+    "type": "agrarian",
+    "currency": { "name": "silver mark", "symbol": "m", "subunit": "copper", "subunitsPerUnit": 20 },
+    "mainExports": ["grain", "wool", "charcoal", "river fish"]
+  },
+  "beliefs": [
+    "The Twin Lights watch every deed; a sin done under both moons is doubly cursed.",
+    "Sickness is punishment for hidden sin, cleansed by confession and offerings.",
+    "Forest spirits take those who wander Thornwood after dark."
+  ],
+  "socialClasses": [
+    { "name": "Nobility", "share": 0.01, "description": "The lord's family and knights; own the land." },
+    { "name": "Clergy", "share": 0.02, "description": "Priests and acolytes of the Twin Lights." },
+    { "name": "Guildfolk", "share": 0.12, "description": "Millers, smiths, weavers and merchants of the towns." },
+    { "name": "Freeholders", "share": 0.15, "description": "Peasants who own small plots." },
+    { "name": "Serfs", "share": 0.70, "description": "Peasants bound to the lord's land." }
+  ],
+  "laws": [
+    "Poaching the lord's deer is punished by the loss of a hand.",
+    "Serfs may not leave their village without the reeve's leave.",
+    "Every caravan through Greyspire pays one mark in ten.",
+    "Since the sickness, the pass is closed by the lord's order."
+  ],
+  "taboos": ["Burying the dead without a priest", "Speaking a name under both moons"],
+  "factions": [
+    { "id": "faction-house-brannoc", "name": "House Brannoc", "goal": "Keep the pass closed and the valley obedient until the heir is found.", "power": 8, "relations": [ { "factionId": "faction-millers-guild", "stance": "rival" }, { "factionId": "faction-twin-lights", "stance": "allied" } ] },
+    { "id": "faction-millers-guild", "name": "Millers' Guild", "goal": "Reopen the pass and profit from grain scarcity.", "power": 6, "relations": [ { "factionId": "faction-house-brannoc", "stance": "rival" } ] },
+    { "id": "faction-twin-lights", "name": "Chapel of the Twin Lights", "goal": "Turn fear of the sickness into faith and tithes.", "power": 5 },
+    { "id": "faction-thornwood-band", "name": "The Thornwood Band", "goal": "Feed the poor by robbing the lord's tax wagons.", "power": 3, "relations": [ { "factionId": "faction-house-brannoc", "stance": "hostile" } ] }
+  ],
+  "naming": {
+    "style": "Old-English-like. Given names of two syllables (Aldric, Hilde). Commoners use trade or place surnames (Tanner, of Millford); nobles use house names. Places compound nature words: -ford, -wood, -spire, -mere.",
+    "personExamples": ["Aldric Brannoc", "Hilde Baker", "Osric Tanner", "Agnes of Millford", "Edwyn Cole", "Mildred Wend", "Garret Fletcher", "Wynna Reed", "Bertram Ash", "Elric Thorne", "Sister Maud", "Tobin Miller"],
+    "placeExamples": ["Millford", "Thornwood", "Greyspire", "Ashmere", "Wendhollow"]
+  },
+  "aesthetic": {
+    "architecture": "Half-timbered houses with wattle and daub walls and thatched roofs in villages; grey fieldstone keeps and town walls; wooden market stalls with striped canvas awnings.",
+    "clothing": "Undyed wool tunics, linen shirts, leather belts and hoods for commoners; dyed blue and green wool for guildfolk; mail and surcoats for soldiers.",
+    "materials": ["oak", "thatch", "fieldstone", "wool", "iron", "clay"],
+    "palette": ["#7a5c3e", "#c9b27c", "#4f6d3a", "#2f3e5a"],
+    "music": "Lutes, recorders and frame drums; chapel bells.",
+    "stylePreference": "realistic",
+    "uiTheme": "parchment"
+  },
+  "calendar": {
+    "currentYear": 961,
+    "eraName": "Year of the Oath",
+    "daysPerYear": 336,
+    "festivals": [
+      { "name": "Twinlight Eve", "dayOfYear": 168, "description": "Both moons full; candles on every sill, confessions at the chapel." },
+      { "name": "Harvest Home", "dayOfYear": 250, "description": "Feast and market after the grain is in." }
+    ]
+  },
+  "vessels": [
+    { "kind": "humanoid", "species": "human", "roles": ["serf farmer", "miller's apprentice", "baker", "acolyte", "squire", "outlaw", "noble child"], "lifespanYears": 55 },
+    { "kind": "animal", "species": "hound", "roles": ["castle hound", "stray"], "lifespanYears": 12 }
+  ],
+  "balance": {
+    "hungerDecayPerHour": 2.7,
+    "energyDecayPerHour": 2.2,
+    "exposureSeverity": 0.6,
+    "dangerMultiplier": 1.3,
+    "diseaseRate": 0.25,
+    "dailyWageBase": 6,
+    "foodPriceBase": 2,
+    "deathSECost": 15
+  }
+}

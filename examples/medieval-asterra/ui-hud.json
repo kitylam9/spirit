@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "1.0",
+  "id": "ui-asterra-hud",
+  "screen": "hud",
+  "theme": "parchment",
+  "accentOverride": "#7a5c3e",
+  "root": {
+    "type": "Stack",
+    "props": { "direction": "column", "gap": 8 },
+    "children": [
+      {
+        "type": "Panel",
+        "props": { "anchor": "top-left", "width": "sm", "variant": "ornate" },
+        "children": [
+          { "type": "Bar", "props": { "label": "Vigor", "bind": "/player/incarnation/stats/health", "max": 100, "color": "health", "warnBelow": 25 } },
+          { "type": "Bar", "props": { "label": "Belly", "bind": "/player/incarnation/stats/hunger", "max": 100, "color": "hunger", "warnBelow": 20 } },
+          { "type": "Bar", "props": { "label": "Weariness", "bind": "/player/incarnation/stats/energy", "max": 100, "color": "energy", "warnBelow": 15 } }
+        ]
+      },
+      {
+        "type": "Panel",
+        "props": { "anchor": "top-right", "width": "xs", "variant": "subtle" },
+        "children": [
+          { "type": "Stat", "props": { "label": "Purse", "bind": "/player/incarnation/stats/wealth", "format": "currency", "icon": "coin-pouch" } },
+          { "type": "Stat", "props": { "label": "Day", "bind": "/world/time/date", "format": "date" } }
+        ]
+      },
+      {
+        "type": "Panel",
+        "props": { "anchor": "bottom-right", "width": "xs" },
+        "children": [
+          { "type": "Map", "props": { "kind": "minimap", "bind": "/scene/map" } }
+        ]
+      }
+    ]
+  }
+}

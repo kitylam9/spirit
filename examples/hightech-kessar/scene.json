@@ -1,0 +1,97 @@
+{
+  "schemaVersion": "1.0",
+  "id": "scene-vesh-deck-12-market",
+  "planetId": "planet-kessar-prime",
+  "regionId": "region-arcology-vesh",
+  "name": "Deck 12 Breathmarket",
+  "description": "A low-ceilinged market deck lit by flickering neon. Air vendors call out prices over the hum of scrubbers, and a security drone drifts above the crowd.",
+  "tier": "T6",
+  "stylePreference": "realistic",
+  "indoor": true,
+  "bounds": { "sizeX": 60, "sizeZ": 40, "maxHeight": 8 },
+  "environment": {
+    "terrain": { "kind": "floor", "material": "wet-metal-grate" },
+    "sky": { "kind": "interior", "timeOfDay": 22 },
+    "fog": { "color": "#2a1f4a", "density": 0.02 },
+    "lighting": {
+      "sun": { "color": "#4455aa", "intensity": 0.2, "elevation": 1.2, "azimuth": 0, "castShadows": false },
+      "ambient": { "color": "#3a2a60", "intensity": 0.4 },
+      "pointLights": [
+        { "position": [-10, 4, 5], "color": "#ff2e88", "intensity": 12, "range": 14, "flicker": true },
+        { "position": [8, 4, -6], "color": "#19d3ff", "intensity": 10, "range": 12, "flicker": false },
+        { "position": [20, 3.5, 10], "color": "#f5d300", "intensity": 6, "range": 8, "flicker": true }
+      ]
+    },
+    "weather": "none",
+    "ambientAudio": ["crowd-cyberpunk", "air-scrubbers", "neon-buzz"]
+  },
+  "budget": { "maxTriangles": 280000, "maxInstances": 350, "maxNewAssets": 6 },
+  "instances": [
+    {
+      "id": "inst-air-kiosk",
+      "label": "Oxygen exchange kiosk",
+      "assetRequest": { "query": "sci-fi cyberpunk vending kiosk with screens", "expectedSize": [3, 3, 2], "style": "realistic", "maxTriangles": 20000 },
+      "procedural": { "kind": "box", "size": [3, 3, 2], "material": "metal", "color": "#19d3ff" },
+      "transform": { "position": [0, 0, -12] }
+    },
+    {
+      "id": "inst-food-stalls",
+      "label": "Noodle stalls",
+      "assetRequest": { "query": "cyberpunk street food stall neon sign", "expectedSize": [3.5, 3, 2.5], "style": "realistic", "maxTriangles": 18000 },
+      "procedural": { "kind": "stall", "size": [3.5, 3, 2.5], "material": "metal" },
+      "transform": { "position": [-18, 0, 8], "rotationY": 1.57 },
+      "count": 4,
+      "scatterRadius": 8
+    },
+    {
+      "id": "inst-crates",
+      "label": "Cargo crates",
+      "assetRequest": { "query": "sci-fi cargo container crate", "expectedSize": [1.2, 1.2, 1.2], "style": "realistic", "maxTriangles": 4000 },
+      "procedural": { "kind": "crate", "size": [1.2, 1.2, 1.2], "material": "polymer" },
+      "transform": { "position": [18, 0, -10] },
+      "count": 10,
+      "scatterRadius": 5
+    },
+    {
+      "id": "inst-security-drone",
+      "label": "Security drone",
+      "assetRequest": { "query": "hovering security drone sci-fi", "expectedSize": [1, 0.5, 1], "style": "realistic", "maxTriangles": 8000, "animated": true },
+      "procedural": { "kind": "sphere", "size": [0.8, 0.4, 0.8], "material": "chrome" },
+      "transform": { "position": [0, 5, 0] },
+      "placement": { "snapToGround": false, "collider": "none", "avoidOverlap": false }
+    },
+    {
+      "id": "inst-terminal",
+      "label": "Old public terminal",
+      "assetRequest": { "query": "old worn sci-fi computer terminal", "expectedSize": [0.8, 1.8, 0.6], "style": "realistic", "maxTriangles": 6000 },
+      "procedural": { "kind": "box", "size": [0.8, 1.8, 0.6], "material": "metal", "color": "#5c5c70" },
+      "transform": { "position": [24, 0, 14], "rotationY": -1.57 }
+    },
+    {
+      "id": "inst-pillars",
+      "label": "Support pillars",
+      "procedural": { "kind": "cylinder", "size": [1.2, 8, 1.2], "material": "concrete" },
+      "transform": { "position": [0, 0, 0] },
+      "count": 8,
+      "scatterRadius": 22
+    }
+  ],
+  "spawnPoints": [
+    { "id": "spawn-lift", "position": [-26, 0, -15], "rotationY": 0.8, "purpose": "arrival" }
+  ],
+  "npcSpawns": [
+    { "npcId": "npc-mara-quell", "position": [1, 0, -10.5], "behavior": "sell" },
+    { "roleHint": "security officer in white armor", "position": [-6, 0, -14], "behavior": "guard" },
+    { "roleHint": "unregistered kid watching the terminal", "position": [23, 0, 12], "behavior": "idle" },
+    { "roleHint": "tired contract worker eating noodles", "position": [-16, 0, 6], "behavior": "sit" }
+  ],
+  "interactables": [
+    { "id": "int-air-kiosk", "instanceId": "inst-air-kiosk", "label": "Buy air credits", "verbs": ["buy", "look"], "itemId": "item-air-canister" },
+    { "id": "int-noodles", "instanceId": "inst-food-stalls", "label": "Noodle stall", "verbs": ["buy", "eat"], "itemId": "item-synth-noodles" },
+    { "id": "int-terminal", "instanceId": "inst-terminal", "label": "Old terminal", "verbs": ["use", "look"] }
+  ],
+  "exits": [
+    { "id": "exit-tube-sump", "label": "Tube down to the Sump", "position": [28, 0, -18], "radius": 2.5, "to": { "regionId": "region-the-sump", "pending": true } },
+    { "id": "exit-lift-upper", "label": "Lift to upper decks", "position": [-28, 0, -18], "radius": 2.5, "to": { "sceneId": "scene-vesh-sky-gardens", "pending": true } }
+  ]
+}

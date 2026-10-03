@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "1.0",
+  "id": "planet-asterra",
+  "name": "Asterra",
+  "systemId": "system-veil-of-orun",
+  "seed": "a3f19c04be7d2210",
+  "tier": "T2",
+  "civilizationId": "civ-asterran-realm",
+  "omen": "Green river valleys under a pale twin moon, where bells ring for the dead more often each week.",
+  "mood": "tense",
+  "danger": 5,
+  "physical": {
+    "radiusKm": 5900,
+    "gravityG": 0.94,
+    "dayLengthHours": 26,
+    "climate": "temperate",
+    "atmosphere": "breathable",
+    "moons": 2,
+    "palette": ["#5b7f3a", "#c9b27c", "#3d5a80", "#8a6f4d"]
+  },
+  "biomes": ["river-valley", "forest", "plains", "mountains"],
+  "regions": [
+    {
+      "id": "region-millford",
+      "name": "Millford",
+      "biome": "river-valley",
+      "description": "A mill village on the River Wend: thatched cottages, a stone bridge, a watermill and a market square that fills every sevenday.",
+      "populationDensity": "village",
+      "danger": 3,
+      "features": ["watermill", "stone bridge", "market square", "chapel of the Twin Lights"],
+      "connections": [
+        { "to": "region-castle-brannoc", "mode": "road", "travelTicks": 240 },
+        { "to": "region-thornwood", "mode": "walk", "travelTicks": 90 }
+      ]
+    },
+    {
+      "id": "region-castle-brannoc",
+      "name": "Castle Brannoc",
+      "biome": "plains",
+      "description": "The seat of Lord Aldric Brannoc, a grey keep above a walled market town crowded with soldiers and petitioners.",
+      "populationDensity": "town",
+      "danger": 4,
+      "features": ["keep", "town walls", "guildhall", "gallows"],
+      "connections": [
+        { "to": "region-millford", "mode": "road", "travelTicks": 240 },
+        { "to": "region-greyspire-pass", "mode": "road", "travelTicks": 480 }
+      ]
+    },
+    {
+      "id": "region-thornwood",
+      "name": "Thornwood",
+      "biome": "forest",
+      "description": "Old forest of black oaks where charcoal burners, poachers and outlaws live beyond the lord's law.",
+      "populationDensity": "sparse",
+      "danger": 7,
+      "features": ["charcoal camps", "ruined shrine", "outlaw hideout"],
+      "connections": [
+        { "to": "region-millford", "mode": "walk", "travelTicks": 90 }
+      ]
+    },
+    {
+      "id": "region-greyspire-pass",
+      "name": "Greyspire Pass",
+      "biome": "mountains",
+      "description": "A cold pass guarded by a toll tower, the only road to the eastern kingdoms and the source of rumors about the sickness.",
+      "populationDensity": "sparse",
+      "danger": 6,
+      "features": ["toll tower", "avalanche shrines", "caravan inn"],
+      "connections": [
+        { "to": "region-castle-brannoc", "mode": "road", "travelTicks": 480 }
+      ]
+    }
+  ],
+  "history": [
+    { "year": 412, "title": "The Founding Oath", "summary": "Seven river clans swore fealty to the first Brannoc in exchange for protection from mountain raiders." },
+    { "year": 655, "title": "The Twin Lights Revealed", "summary": "Priests declared the two moons to be the eyes of the gods, founding the Chapel of the Twin Lights." },
+    { "year": 801, "title": "The Long Winter", "summary": "Three failed harvests; the guilds rose in power by controlling grain stores." },
+    { "year": 934, "title": "Greyspire Toll", "summary": "Lord Brannoc fortified the pass and taxed every caravan, enriching the castle and angering merchants." },
+    { "year": 961, "title": "The Coughing Sickness", "summary": "A sickness arrived with eastern caravans. The lord closed the pass; the guilds want it reopened." }
+  ],
+  "hooks": [
+    "The coughing sickness has reached the river villages, and the chapel blames sinners.",
+    "The Millers' Guild secretly hoards grain while prices rise.",
+    "Outlaws in Thornwood are stealing from tax wagons and giving bread to the poor.",
+    "Lord Brannoc's heir has vanished on the road to Greyspire Pass."
+  ]
+}

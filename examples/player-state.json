@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "1.0",
+  "id": "player-lam",
+  "universeSeed": "c0ffee1234abcd99",
+  "difficulty": "seeker",
+  "canonSnapshotId": "canon-000143",
+  "spirit": {
+    "energy": 62.5,
+    "memorySlots": 5,
+    "memories": [
+      {
+        "id": "mem-steel-and-fire",
+        "text": "The rhythm of the hammer on hot steel, learned at a forge on a world of ash.",
+        "fromPlanetId": "planet-kessar-prime",
+        "effect": "skill-bonus",
+        "tags": ["craft", "smithing"]
+      }
+    ],
+    "traits": [
+      { "id": "trait-iron-will", "name": "Iron Will", "description": "Resolve decays 25% slower." }
+    ],
+    "livesLived": 1,
+    "insight": 14
+  },
+  "location": {
+    "phase": "planet",
+    "systemId": "system-veil-of-orun",
+    "planetId": "planet-asterra",
+    "regionId": "region-millford",
+    "sceneId": "scene-millford-market",
+    "position": [0, 0, 8]
+  },
+  "incarnation": {
+    "id": "life-asterra-wynna",
+    "mode": "arrive",
+    "planetId": "planet-asterra",
+    "vessel": { "kind": "humanoid", "species": "human", "role": "miller's apprentice", "name": "Wynna Reed", "age": 17, "lifespan": 55 },
+    "stats": { "health": 92, "hunger": 64, "energy": 71, "exposure": 8, "reputation": 40, "wealth": 3, "resolve": 66, "insight": 10 },
+    "legalStatus": "free",
+    "relationships": [ { "npcId": "npc-hilde-baker", "opinion": 10, "kind": "acquaintance" } ],
+    "inventory": [ { "itemId": "item-rye-bread", "name": "Rye loaf", "qty": 1 } ],
+    "goals": [ { "goalId": "goal-master-miller", "title": "Become a master miller", "status": "active" } ],
+    "fulfillment": 12,
+    "startedAtTick": 0
+  },
+  "time": { "tick": 1840, "realSecondsPlayed": 2950 },
+  "pastLives": [
+    {
+      "lifeId": "life-kessar-dex",
+      "planetId": "planet-kessar-prime",
+      "vesselName": "Dex-44",
+      "yearsLived": 23,
+      "causeOfDeath": "Acid storm in the Ashfields",
+      "epitaph": "Contract 44 closed. Debt outstanding: none. He gave his last air canister to a stranger.",
+      "seDelta": -8
+    }
+  ]
+}

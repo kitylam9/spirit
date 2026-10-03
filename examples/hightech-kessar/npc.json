@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "1.0",
+  "id": "npc-mara-quell",
+  "name": "Mara Quell",
+  "planetId": "planet-kessar-prime",
+  "regionId": "region-arcology-vesh",
+  "homeSceneId": "scene-vesh-deck-12-market",
+  "species": "human",
+  "vesselKind": "humanoid",
+  "role": "oxygen exchange clerk",
+  "socialClass": "Contract citizens",
+  "factionId": "faction-lanternists",
+  "age": 29,
+  "appearance": {
+    "description": "Thin woman in a Halcyon-blue uniform jacket, a cracked rebreather around her neck, and a chrome implant glowing behind her left ear.",
+    "bodyAssetRequest": "cyberpunk female character in uniform, rigged",
+    "tint": ["#19d3ff", "#2a2a3a"]
+  },
+  "personality": {
+    "traits": ["polite on camera", "sardonic off camera", "brave"],
+    "speechStyle": "Corporate script when monitored; quick street slang when the drone looks away.",
+    "values": ["the Sump kids", "truth"],
+    "fears": ["contract termination", "her implant being audited"],
+    "secret": "She runs a hidden Lantern fragment on the old terminal and skims air credits for Sump families."
+  },
+  "goals": ["Keep skimming air for the Sump without being caught", "Find the rest of Lantern's fragments"],
+  "knowledge": [
+    { "fact": "Air prices on Deck 12 rise 3% every week before Launch Day.", "willingness": "freely" },
+    { "fact": "The black clinic's free implants report to Halcyon.", "willingness": "if-trusted" },
+    { "fact": "The old terminal on Deck 12 still talks to Lantern.", "willingness": "never" }
+  ],
+  "relationships": [
+    { "targetId": "faction-halcyon", "kind": "employer", "opinion": -40 },
+    { "targetId": "faction-lanternists", "kind": "friend", "opinion": 70 }
+  ],
+  "schedule": [
+    { "fromHour": 8, "toHour": 20, "sceneId": "scene-vesh-deck-12-market", "activity": "work" },
+    { "fromHour": 20, "toHour": 24, "activity": "socialize" },
+    { "fromHour": 0, "toHour": 8, "activity": "sleep" }
+  ],
+  "inventory": [
+    { "itemId": "item-air-canister", "name": "1-hour air canister", "qty": 30, "value": 15, "forSale": true },
+    { "itemId": "item-data-shard", "name": "Encrypted data shard", "qty": 1, "value": 200, "forSale": false }
+  ],
+  "stats": { "health": 70, "combat": 3, "wealth": 2 },
+  "greeting": "Welcome to Halcyon Air Exchange. Breathe easy. ...You look like you're running on fumes, friend."
+}

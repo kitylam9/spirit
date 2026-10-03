@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "1.0",
+  "id": "evt-whispers-at-the-well",
+  "planetId": "planet-asterra",
+  "regionId": "region-millford",
+  "kind": "local",
+  "title": "Whispers at the Well",
+  "text": "The miller's wife swears the river folk downstream are coughing blood. The reeve calls it idle talk, but he will not drink from the well today.",
+  "pacing": "rising",
+  "involvedNpcIds": ["npc-hilde-baker"],
+  "trigger": { "type": "on-enter-scene", "sceneId": "scene-millford-market" },
+  "choices": [
+    {
+      "id": "choice-warn-hilde",
+      "label": "Warn Hilde the baker",
+      "hint": "She sells to half the village.",
+      "action": { "verb": "talk", "params": { "npcId": "npc-hilde-baker", "topic": "sickness-rumor" } },
+      "effects": [ { "path": "/player/incarnation/relationships/npc-hilde-baker", "op": "add", "value": 5 } ],
+      "followUp": "Hilde goes pale, then nods. 'I'll boil the water. Tell no one I was scared.'"
+    },
+    {
+      "id": "choice-go-downstream",
+      "label": "Go downstream and see",
+      "hint": "Risky, but you would know the truth.",
+      "action": { "verb": "travel", "params": { "regionId": "region-thornwood" } },
+      "effects": [ { "path": "/player/incarnation/stats/insight", "op": "add", "value": 8 } ],
+      "followUp": "You take the river path while the bells start to ring."
+    },
+    {
+      "id": "choice-ignore",
+      "label": "Ignore the rumor",
+      "action": { "verb": "ui.close", "params": {} },
+      "effects": [ { "path": "/player/incarnation/stats/resolve", "op": "add", "value": -2 } ]
+    }
+  ],
+  "expiresInTicks": 180,
+  "canonFacts": [
+    "The coughing sickness has reached the villages downstream of Millford.",
+    "Millford's reeve fears the well is tainted."
+  ]
+}

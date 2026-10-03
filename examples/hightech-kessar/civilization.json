@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "1.0",
+  "id": "civ-kessar-compact",
+  "planetId": "planet-kessar-prime",
+  "name": "The Kessar Compact",
+  "tier": "T6",
+  "techProfile": {
+    "agriculture": "T6",
+    "energy": "T6",
+    "medicine": "T6",
+    "weapons": "T6",
+    "communication": "T6",
+    "transport": "T6",
+    "computing": "T6"
+  },
+  "summary": "A corporate oligarchy of sealed arcologies on a poisoned world. Citizenship is a contract, air is a commodity, and augmentation is both a ladder and a leash. Beneath the towers, the unregistered build their own economy out of scrap and stolen code.",
+  "population": "about 90 million in 40 arcologies",
+  "government": {
+    "type": "corporate-oligarchy",
+    "ruler": "The Board of Seven, chaired by Halcyon Biosystems CEO Ivra Solenne",
+    "description": "Each arcology is governed by its owning corporation; the Board settles disputes and sets the air index."
+  },
+  "economy": {
+    "type": "market",
+    "currency": { "name": "air credit", "symbol": "AC", "subunit": "breath", "subunitsPerUnit": 100 },
+    "mainExports": ["colony ships", "bio-implants", "synthetic food", "AI licenses"]
+  },
+  "beliefs": [
+    "Contract is identity: the unregistered are legally no one.",
+    "The Ascendant faith teaches that uploading to the corporate cloud is salvation.",
+    "Sump folk tell stories of Lantern, the AI that gave away air."
+  ],
+  "socialClasses": [
+    { "name": "Shareholders", "share": 0.02, "description": "Live on the top decks; own seats on the colony ships." },
+    { "name": "Contract citizens", "share": 0.58, "description": "Work for a corporation in exchange for air, housing and implants." },
+    { "name": "Indentured", "share": 0.15, "description": "Paying off debts with labor, mostly at Dock 9." },
+    { "name": "Unregistered", "share": 0.25, "description": "No contract, no rights; live in the Sump." }
+  ],
+  "laws": [
+    "Breathing above your contracted air quota is theft.",
+    "Unlicensed AI is a capital crime.",
+    "Implants remain corporate property until fully paid."
+  ],
+  "taboos": ["Removing a corporate implant", "Speaking Lantern's name in a monitored zone"],
+  "factions": [
+    { "id": "faction-halcyon", "name": "Halcyon Biosystems", "goal": "Launch the Exodus ships with shareholders only, whatever it costs the lower decks.", "power": 9, "relations": [ { "factionId": "faction-riggers-union", "stance": "hostile" } ] },
+    { "id": "faction-riggers-union", "name": "Dock 9 Riggers' Union", "goal": "Win seats on the colony ships for the workers who build them.", "power": 4, "relations": [ { "factionId": "faction-lanternists", "stance": "friendly" } ] },
+    { "id": "faction-lanternists", "name": "The Lanternists", "goal": "Reassemble Lantern and free the air.", "power": 3 },
+    { "id": "faction-ascendant", "name": "Church of the Ascendant", "goal": "Persuade citizens to sell their bodies and upload to the corporate cloud.", "power": 5, "relations": [ { "factionId": "faction-halcyon", "stance": "allied" } ] }
+  ],
+  "naming": {
+    "style": "Clipped, multicultural syllables; given name + contract code for citizens (Ivra Solenne, Dex-44). Unregistered take nicknames. Places are corporate or functional names.",
+    "personExamples": ["Ivra Solenne", "Dex-44", "Mara Quell", "Tovin Ashe", "Juno Kade", "Rook", "Sefa Morrow", "Kai Venn", "Lio Tarrant", "Nim", "Oksana Vey", "Ptah-12"],
+    "placeExamples": ["Arcology Vesh", "The Sump", "Dock 9", "Halcyon Spire", "Breathmarket"]
+  },
+  "aesthetic": {
+    "architecture": "Monolithic arcology towers of dark glass and concrete, stacked decks, neon signage in tight alleys, maglev tubes, rain-slick metal walkways.",
+    "clothing": "Sealed rebreather masks, layered synthetic jackets with LED trims, visible chrome implants; shareholders wear white bio-fabric.",
+    "materials": ["glass", "concrete", "chrome", "neon", "carbon fiber", "polymer"],
+    "palette": ["#1b1036", "#ff2e88", "#19d3ff", "#f5d300"],
+    "music": "Dark synthwave, distorted vocals, industrial percussion.",
+    "stylePreference": "realistic",
+    "uiTheme": "neon-holo"
+  },
+  "calendar": {
+    "currentYear": 2263,
+    "eraName": "Compact Era",
+    "daysPerYear": 290,
+    "festivals": [
+      { "name": "Founders' Breath", "dayOfYear": 1, "description": "One free day of air for all contract citizens." },
+      { "name": "Launch Day", "dayOfYear": 210, "description": "Scheduled departure of the first Exodus ship." }
+    ]
+  },
+  "vessels": [
+    { "kind": "humanoid", "species": "human", "roles": ["Sump scavenger", "contract janitor", "Dock 9 rigger", "black-clinic medic", "security officer", "shareholder heir"], "lifespanYears": 85 },
+    { "kind": "android", "species": "service android", "roles": ["service unit", "rogue android"], "lifespanYears": 30 }
+  ],
+  "balance": {
+    "hungerDecayPerHour": 1.9,
+    "energyDecayPerHour": 2.1,
+    "exposureSeverity": 2.6,
+    "dangerMultiplier": 1.4,
+    "diseaseRate": 0.03,
+    "dailyWageBase": 40,
+    "foodPriceBase": 12,
+    "deathSECost": 20
+  }
+}

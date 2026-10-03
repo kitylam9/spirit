@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spirit.game/schemas/player-state.schema.json",
+  "title": "Player State",
+  "description": "Authoritative player state owned by the rules engine. Agents receive read-only summaries of it; they never write it directly.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "universeSeed", "difficulty", "spirit", "location", "time", "pastLives", "canonSnapshotId"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "id": { "type": "string", "pattern": "^player-[a-z0-9-]+$" },
+    "universeSeed": { "type": "string", "pattern": "^[0-9a-f]{16}$" },
+    "difficulty": { "type": "string", "enum": ["wanderer", "seeker", "ascetic"] },
+    "canonSnapshotId": { "type": "string", "maxLength": 80 },
+    "spirit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["energy", "memories", "memorySlots", "traits", "livesLived"],
+      "properties": {
+        "energy": { "type": "number", "minimum": 0, "maximum": 100 },
+        "memorySlots": { "type": "integer", "minimum": 1, "maximum": 12 },
+        "memories": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "text", "fromPlanetId", "effect"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^mem-[a-z0-9-]+$" },
+              "text": { "type": "string", "maxLength": 200 },
+              "fromPlanetId": { "type": "string", "pattern": "^planet-[a-z0-9-]+$" },
+              "effect": { "type": "string", "enum": ["dialogue-unlock", "skill-bonus", "recognition", "insight"] },
+              "tags": { "type": "array", "items": { "type": "string", "maxLength": 30 }, "maxItems": 6 }
+            }
+          }
+        },
+        "traits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "name", "description"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^trait-[a-z0-9-]+$" },
+              "name": { "type": "string", "maxLength": 40 },
+              "description": { "type": "string", "maxLength": 200 }
+            }
+          }
+        },
+        "livesLived": { "type": "integer", "minimum": 0 },
+        "insight": { "type": "number", "minimum": 0 }
+      }
+    },
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phase", "systemId"],
+      "properties": {
+        "phase": { "type": "string", "enum": ["space", "descent", "planet", "reflection"] },
+        "systemId": { "type": "string", "pattern": "^system-[a-z0-9-]+$" },
+        "planetId": { "type": "string", "pattern": "^planet-[a-z0-9-]+$" },
+        "regionId": { "type": "string", "pattern": "^region-[a-z0-9-]+$" },
+        "sceneId": { "type": "string", "pattern": "^scene-[a-z0-9-]+$" },
+        "position": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 }
+      }
+    },
+    "incarnation": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["id", "mode", "planetId", "vessel", "stats", "relationships", "inventory", "goals", "startedAtTick"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^life-[a-z0-9-]+$" },
+        "mode": { "type": "string", "enum": ["born", "arrive", "possess"] },
+        "planetId": { "type": "string", "pattern": "^planet-[a-z0-9-]+$" },
+        "vessel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "species", "role", "name", "age", "lifespan"],
+          "properties": {
+            "kind": { "type": "string", "enum": ["humanoid", "animal", "android", "hive-drone", "uploaded-mind", "other"] },
+            "species": { "type": "string", "maxLength": 40 },
+            "role": { "type": "string", "maxLength": 60 },
+            "name": { "type": "string", "maxLength": 60 },
+            "age": { "type": "number", "minimum": 0 },
+            "lifespan": { "type": "number", "minimum": 1 },
+            "possessedNpcId": { "type": "string", "pattern": "^npc-[a-z0-9-]+$" }
+          }
+        },
+        "stats": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["health", "hunger", "energy", "exposure", "reputation", "wealth", "resolve", "insight"],
+          "properties": {
+            "health": { "$ref": "#/$defs/stat" },
+            "hunger": { "$ref": "#/$defs/stat", "description": "100 = full, 0 = starving." },
+            "energy": { "$ref": "#/$defs/stat" },
+            "exposure": { "$ref": "#/$defs/stat", "description": "0 = comfortable, 100 = lethal exposure." },
+            "reputation": { "$ref": "#/$defs/stat" },
+            "wealth": { "type": "number", "minimum": 0, "description": "Money in civilization currency units." },
+            "resolve": { "$ref": "#/$defs/stat" },
+            "insight": { "$ref": "#/$defs/stat" }
+          }
+        },
+        "legalStatus": { "type": "string", "enum": ["free", "suspect", "wanted", "imprisoned", "exiled", "outlaw"] },
+        "relationships": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["npcId", "opinion"],
+            "properties": {
+              "npcId": { "type": "string", "pattern": "^npc-[a-z0-9-]+$" },
+              "opinion": { "type": "integer", "minimum": -100, "maximum": 100 },
+              "kind": { "type": "string", "maxLength": 30 }
+            }
+          }
+        },
+        "inventory": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["itemId", "name", "qty"],
+            "properties": {
+              "itemId": { "type": "string", "pattern": "^item-[a-z0-9-]+$" },
+              "name": { "type": "string", "maxLength": 60 },
+              "qty": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "goals": {
+          "type": "array",
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["goalId", "title", "status"],
+            "properties": {
+              "goalId": { "type": "string", "pattern": "^goal-[a-z0-9-]+$" },
+              "title": { "type": "string", "maxLength": 80 },
+              "status": { "type": "string", "enum": ["active", "completed", "failed", "abandoned"] }
+            }
+          }
+        },
+        "fulfillment": { "type": "number", "minimum": 0, "maximum": 100 },
+        "startedAtTick": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "time": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tick"],
+      "properties": {
+        "tick": { "type": "integer", "minimum": 0 },
+        "realSecondsPlayed": { "type": "number", "minimum": 0 }
+      }
+    },
+    "pastLives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["lifeId", "planetId", "vesselName", "yearsLived", "epitaph", "seDelta"],
+        "properties": {
+          "lifeId": { "type": "string", "pattern": "^life-[a-z0-9-]+$" },
+          "planetId": { "type": "string", "pattern": "^planet-[a-z0-9-]+$" },
+          "vesselName": { "type": "string", "maxLength": 60 },
+          "yearsLived": { "type": "number", "minimum": 0 },
+          "causeOfDeath": { "type": "string", "maxLength": 100 },
+          "epitaph": { "type": "string", "maxLength": 400 },
+          "seDelta": { "type": "number" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "stat": { "type": "number", "minimum": 0, "maximum": 100 }
+  }
+}

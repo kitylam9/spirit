@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spirit.game/schemas/planet.schema.json",
+  "title": "Planet",
+  "description": "A planet produced by the World Architect agent. Physical values come from the procedural seed and must not be changed by the agent.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "name", "systemId", "seed", "tier", "civilizationId", "omen", "physical", "biomes", "regions", "history", "hooks"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "id": { "type": "string", "pattern": "^planet-[a-z0-9-]+$" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 60 },
+    "systemId": { "type": "string", "pattern": "^system-[a-z0-9-]+$" },
+    "seed": { "type": "string", "pattern": "^[0-9a-f]{16}$", "description": "64-bit hex seed derived from the universe seed." },
+    "tier": { "$ref": "#/$defs/tier" },
+    "civilizationId": { "type": "string", "pattern": "^civ-[a-z0-9-]+$" },
+    "omen": { "type": "string", "maxLength": 160, "description": "One-line hook shown from space." },
+    "mood": { "type": "string", "enum": ["serene", "hopeful", "tense", "grim", "chaotic", "mysterious"] },
+    "danger": { "type": "integer", "minimum": 0, "maximum": 10 },
+    "physical": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["radiusKm", "gravityG", "dayLengthHours", "climate", "atmosphere", "palette"],
+      "properties": {
+        "radiusKm": { "type": "number", "minimum": 500, "maximum": 30000 },
+        "gravityG": { "type": "number", "minimum": 0.1, "maximum": 3 },
+        "dayLengthHours": { "type": "number", "minimum": 4, "maximum": 200 },
+        "climate": { "type": "string", "enum": ["frozen", "cold", "temperate", "warm", "arid", "tropical", "toxic", "varied"] },
+        "atmosphere": { "type": "string", "enum": ["none", "thin", "breathable", "dense", "toxic"] },
+        "moons": { "type": "integer", "minimum": 0, "maximum": 12 },
+        "palette": { "type": "array", "items": { "$ref": "#/$defs/hexColor" }, "minItems": 3, "maxItems": 6 }
+      }
+    },
+    "biomes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/biome" }
+    },
+    "regions": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "biome", "description", "populationDensity", "danger", "features", "connections"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^region-[a-z0-9-]+$" },
+          "name": { "type": "string", "maxLength": 60 },
+          "biome": { "$ref": "#/$defs/biome" },
+          "description": { "type": "string", "maxLength": 600 },
+          "populationDensity": { "type": "string", "enum": ["empty", "sparse", "village", "town", "city", "metropolis"] },
+          "danger": { "type": "integer", "minimum": 0, "maximum": 10 },
+          "features": { "type": "array", "items": { "type": "string", "maxLength": 80 }, "maxItems": 10 },
+          "connections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["to", "mode", "travelTicks"],
+              "properties": {
+                "to": { "type": "string", "pattern": "^region-[a-z0-9-]+$" },
+                "mode": { "type": "string", "enum": ["walk", "road", "river", "sea", "rail", "air", "tube", "teleport"] },
+                "travelTicks": { "type": "integer", "minimum": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "history": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 15,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["year", "title", "summary"],
+        "properties": {
+          "year": { "type": "integer", "description": "Year in the civilization calendar; negative allowed." },
+          "title": { "type": "string", "maxLength": 80 },
+          "summary": { "type": "string", "maxLength": 400 }
+        }
+      }
+    },
+    "hooks": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 6,
+      "items": { "type": "string", "maxLength": 200 }
+    },
+    "relations": {
+      "type": "array",
+      "description": "Relations with other planets in the same system (mostly T5+).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["planetId", "kind"],
+        "properties": {
+          "planetId": { "type": "string", "pattern": "^planet-[a-z0-9-]+$" },
+          "kind": { "type": "string", "enum": ["unaware", "myth", "trade", "alliance", "rivalry", "war", "colony", "ruler"] },
+          "note": { "type": "string", "maxLength": 200 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "tier": { "type": "string", "enum": ["T0", "T1", "T2", "T3", "T4", "T5", "T6", "T7"] },
+    "hexColor": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+    "biome": {
+      "type": "string",
+      "enum": ["forest", "plains", "desert", "tundra", "mountains", "swamp", "jungle", "ocean", "coast", "river-valley", "volcanic", "ice", "urban", "megacity", "orbital", "underground", "wasteland", "crystal"]
+    }
+  }
+}

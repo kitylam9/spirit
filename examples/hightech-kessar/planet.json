@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "1.0",
+  "id": "planet-kessar-prime",
+  "name": "Kessar Prime",
+  "systemId": "system-veil-of-orun",
+  "seed": "7e02d5b19a4c88f3",
+  "tier": "T6",
+  "civilizationId": "civ-kessar-compact",
+  "omen": "A night-side ring of neon cities beneath orbital docks, where breathing air is sold by the hour.",
+  "mood": "chaotic",
+  "danger": 6,
+  "physical": {
+    "radiusKm": 7200,
+    "gravityG": 1.12,
+    "dayLengthHours": 31,
+    "climate": "toxic",
+    "atmosphere": "toxic",
+    "moons": 1,
+    "palette": ["#1b1036", "#ff2e88", "#19d3ff", "#5c5c70", "#f5d300"]
+  },
+  "biomes": ["megacity", "wasteland", "orbital", "underground"],
+  "regions": [
+    {
+      "id": "region-arcology-vesh",
+      "name": "Arcology Vesh",
+      "biome": "megacity",
+      "description": "A 3-kilometer arcology tower owned by Halcyon Biosystems; the upper decks have gardens and clean air, the lower decks have rationed oxygen and noodle stalls.",
+      "populationDensity": "metropolis",
+      "danger": 5,
+      "features": ["sky gardens", "oxygen exchange", "maglev hub", "corporate security checkpoints"],
+      "connections": [
+        { "to": "region-the-sump", "mode": "tube", "travelTicks": 20 },
+        { "to": "region-orbital-dock-9", "mode": "air", "travelTicks": 60 }
+      ]
+    },
+    {
+      "id": "region-the-sump",
+      "name": "The Sump",
+      "biome": "underground",
+      "description": "Flooded foundations under the arcologies where unregistered citizens, rogue clinics and scrap-AI markets thrive.",
+      "populationDensity": "city",
+      "danger": 8,
+      "features": ["black clinics", "scrap markets", "flooded tunnels", "illegal AI cores"],
+      "connections": [
+        { "to": "region-arcology-vesh", "mode": "tube", "travelTicks": 20 },
+        { "to": "region-ashfields", "mode": "walk", "travelTicks": 120 }
+      ]
+    },
+    {
+      "id": "region-ashfields",
+      "name": "The Ashfields",
+      "biome": "wasteland",
+      "description": "Toxic plains of collapsed pre-Compact cities, crossed only in sealed suits by scavengers and cultists.",
+      "populationDensity": "empty",
+      "danger": 9,
+      "features": ["dead cities", "acid storms", "buried data vaults"],
+      "connections": [
+        { "to": "region-the-sump", "mode": "walk", "travelTicks": 120 }
+      ]
+    },
+    {
+      "id": "region-orbital-dock-9",
+      "name": "Orbital Dock 9",
+      "biome": "orbital",
+      "description": "A zero-g shipyard where indentured riggers build colony ships they will never board.",
+      "populationDensity": "town",
+      "danger": 4,
+      "features": ["shipyards", "zero-g bars", "union hall"],
+      "connections": [
+        { "to": "region-arcology-vesh", "mode": "air", "travelTicks": 60 }
+      ]
+    }
+  ],
+  "history": [
+    { "year": 2140, "title": "The Burning", "summary": "Runaway industry poisoned the atmosphere; open-air cities collapsed." },
+    { "year": 2161, "title": "The Compact", "summary": "Seven corporations sealed the survivors inside arcologies in exchange for citizenship contracts." },
+    { "year": 2203, "title": "Air Exchange", "summary": "Breathable air became a traded commodity priced by deck level." },
+    { "year": 2238, "title": "The Lantern Uprising", "summary": "A rogue AI named Lantern helped Sump dwellers hack oxygen quotas before being 'deleted'." },
+    { "year": 2251, "title": "Exodus Project", "summary": "Halcyon began building colony ships at Dock 9, with seats sold only to shareholders." }
+  ],
+  "hooks": [
+    "Lantern may not be deleted: fragments of it are whispering to Sump children through old terminals.",
+    "Halcyon is quietly raising oxygen prices on the lower decks before the Exodus launch.",
+    "A black clinic offers free lung implants that seem to report on their owners.",
+    "The riggers' union at Dock 9 is planning a strike that could ground the colony ships."
+  ],
+  "relations": [
+    { "planetId": "planet-asterra", "kind": "unaware", "note": "Kessar's deep-space scans have not yet resolved Asterra's lights." }
+  ]
+}

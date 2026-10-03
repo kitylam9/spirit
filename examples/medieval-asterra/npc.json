@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "1.0",
+  "id": "npc-hilde-baker",
+  "name": "Hilde Baker",
+  "planetId": "planet-asterra",
+  "regionId": "region-millford",
+  "homeSceneId": "scene-millford-market",
+  "species": "human",
+  "vesselKind": "humanoid",
+  "role": "village baker",
+  "socialClass": "Freeholders",
+  "age": 41,
+  "appearance": {
+    "description": "Broad-shouldered woman with flour-dusted forearms, a grey linen apron and a red wool headscarf.",
+    "bodyAssetRequest": "medieval female villager, rigged, apron and headscarf",
+    "tint": ["#8a8a80", "#a33a2a"]
+  },
+  "personality": {
+    "traits": ["blunt", "hard-working", "secretly frightened"],
+    "speechStyle": "Short sentences, dry humor, village dialect, never wastes words on strangers.",
+    "values": ["family", "fair prices"],
+    "fears": ["the sickness", "the Millers' Guild"],
+    "secret": "She buys flour from the Thornwood Band because the guild's prices would ruin her."
+  },
+  "goals": ["Keep the bakery open through the shortage", "Get her son Edwyn out of the lord's levy"],
+  "knowledge": [
+    { "fact": "Flour prices doubled since the pass closed.", "willingness": "freely" },
+    { "fact": "The Millers' Guild is storing grain in the old tithe barn.", "willingness": "if-trusted" },
+    { "fact": "The Thornwood Band sells flour at the ruined shrine at dusk.", "willingness": "never" }
+  ],
+  "relationships": [
+    { "targetId": "npc-edwyn-baker", "kind": "family", "opinion": 90 },
+    { "targetId": "faction-millers-guild", "kind": "rival", "opinion": -60 }
+  ],
+  "schedule": [
+    { "fromHour": 4, "toHour": 9, "activity": "work" },
+    { "fromHour": 9, "toHour": 16, "sceneId": "scene-millford-market", "activity": "trade" },
+    { "fromHour": 16, "toHour": 21, "activity": "rest" },
+    { "fromHour": 21, "toHour": 24, "activity": "sleep" }
+  ],
+  "inventory": [
+    { "itemId": "item-rye-bread", "name": "Rye loaf", "qty": 14, "value": 2, "forSale": true },
+    { "itemId": "item-honey-cake", "name": "Honey cake", "qty": 3, "value": 6, "forSale": true }
+  ],
+  "stats": { "health": 85, "combat": 2, "wealth": 3 },
+  "greeting": "Bread's two copper. Same as yesterday. Maybe not tomorrow."
+}

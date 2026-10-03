@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spirit.game/schemas/civilization.schema.json",
+  "title": "Civilization",
+  "description": "The dominant civilization of a planet, produced by the Civilization agent. The balance block is produced by the Rules/Balance agent and is clamped by the rules engine.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "planetId", "name", "tier", "techProfile", "summary", "government", "economy", "beliefs", "socialClasses", "laws", "factions", "naming", "aesthetic", "calendar", "vessels"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "id": { "type": "string", "pattern": "^civ-[a-z0-9-]+$" },
+    "planetId": { "type": "string", "pattern": "^planet-[a-z0-9-]+$" },
+    "name": { "type": "string", "maxLength": 60 },
+    "tier": { "$ref": "#/$defs/tier" },
+    "techProfile": {
+      "type": "object",
+      "description": "Per-domain tier. Lets a civilization be uneven, e.g. T2 society with T6 relic medicine.",
+      "additionalProperties": false,
+      "required": ["agriculture", "energy", "medicine", "weapons", "communication", "transport", "computing"],
+      "properties": {
+        "agriculture": { "$ref": "#/$defs/tier" },
+        "energy": { "$ref": "#/$defs/tier" },
+        "medicine": { "$ref": "#/$defs/tier" },
+        "weapons": { "$ref": "#/$defs/tier" },
+        "communication": { "$ref": "#/$defs/tier" },
+        "transport": { "$ref": "#/$defs/tier" },
+        "computing": { "$ref": "#/$defs/tier" }
+      }
+    },
+    "summary": { "type": "string", "maxLength": 800 },
+    "population": { "type": "string", "maxLength": 60 },
+    "government": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "ruler", "description"],
+      "properties": {
+        "type": { "type": "string", "enum": ["none", "kinship", "chiefdom", "feudal-monarchy", "theocracy", "republic", "empire", "democracy", "corporate-oligarchy", "technocracy", "ai-governance", "anarchy", "hive"] },
+        "ruler": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 400 }
+      }
+    },
+    "economy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "currency", "mainExports"],
+      "properties": {
+        "type": { "type": "string", "enum": ["subsistence", "barter", "agrarian", "mercantile", "industrial", "market", "post-scarcity", "planned"] },
+        "currency": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "symbol"],
+          "properties": {
+            "name": { "type": "string", "maxLength": 30 },
+            "symbol": { "type": "string", "maxLength": 4 },
+            "subunit": { "type": "string", "maxLength": 30 },
+            "subunitsPerUnit": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "mainExports": { "type": "array", "items": { "type": "string", "maxLength": 40 }, "maxItems": 8 }
+      }
+    },
+    "beliefs": { "type": "array", "items": { "type": "string", "maxLength": 200 }, "minItems": 1, "maxItems": 6 },
+    "socialClasses": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "share", "description"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 40 },
+          "share": { "type": "number", "minimum": 0, "maximum": 1, "description": "Fraction of population." },
+          "description": { "type": "string", "maxLength": 200 }
+        }
+      }
+    },
+    "laws": { "type": "array", "items": { "type": "string", "maxLength": 160 }, "maxItems": 10 },
+    "taboos": { "type": "array", "items": { "type": "string", "maxLength": 160 }, "maxItems": 8 },
+    "factions": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "goal", "power"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^faction-[a-z0-9-]+$" },
+          "name": { "type": "string", "maxLength": 60 },
+          "goal": { "type": "string", "maxLength": 200 },
+          "power": { "type": "integer", "minimum": 0, "maximum": 10 },
+          "relations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["factionId", "stance"],
+              "properties": {
+                "factionId": { "type": "string", "pattern": "^faction-[a-z0-9-]+$" },
+                "stance": { "type": "string", "enum": ["allied", "friendly", "neutral", "rival", "hostile", "at-war"] }
+              }
+            }
+          }
+        }
+      }
+    },
+    "naming": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["style", "personExamples", "placeExamples"],
+      "properties": {
+        "style": { "type": "string", "maxLength": 400, "description": "Phonetic and structural rules all agents must follow." },
+        "personExamples": { "type": "array", "items": { "type": "string" }, "minItems": 10 },
+        "placeExamples": { "type": "array", "items": { "type": "string" }, "minItems": 5 }
+      }
+    },
+    "aesthetic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["architecture", "clothing", "materials", "palette", "stylePreference"],
+      "properties": {
+        "architecture": { "type": "string", "maxLength": 300 },
+        "clothing": { "type": "string", "maxLength": 300 },
+        "materials": { "type": "array", "items": { "type": "string", "maxLength": 30 }, "minItems": 1, "maxItems": 10 },
+        "palette": { "type": "array", "items": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }, "minItems": 3, "maxItems": 6 },
+        "music": { "type": "string", "maxLength": 200 },
+        "stylePreference": { "type": "string", "enum": ["realistic", "stylized", "low-poly"] },
+        "uiTheme": { "type": "string", "enum": ["organic", "bone-and-ochre", "parchment", "ink-and-brass", "steam-and-iron", "flat-digital", "neon-holo", "luminous-minimal"] }
+      }
+    },
+    "calendar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currentYear", "eraName", "daysPerYear", "festivals"],
+      "properties": {
+        "currentYear": { "type": "integer" },
+        "eraName": { "type": "string", "maxLength": 40 },
+        "daysPerYear": { "type": "integer", "minimum": 50, "maximum": 1000 },
+        "festivals": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "dayOfYear", "description"],
+            "properties": {
+              "name": { "type": "string", "maxLength": 40 },
+              "dayOfYear": { "type": "integer", "minimum": 1 },
+              "description": { "type": "string", "maxLength": 200 }
+            }
+          }
+        }
+      }
+    },
+    "vessels": {
+      "type": "array",
+      "description": "Body kinds the player may incarnate into on this planet.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "species", "roles", "lifespanYears"],
+        "properties": {
+          "kind": { "type": "string", "enum": ["humanoid", "animal", "android", "hive-drone", "uploaded-mind", "other"] },
+          "species": { "type": "string", "maxLength": 40 },
+          "roles": { "type": "array", "items": { "type": "string", "maxLength": 40 }, "minItems": 1 },
+          "lifespanYears": { "type": "integer", "minimum": 1, "maximum": 1000 }
+        }
+      }
+    },
+    "balance": {
+      "type": "object",
+      "description": "Rules/Balance agent output. All values are re-clamped by the rules engine.",
+      "additionalProperties": false,
+      "properties": {
+        "hungerDecayPerHour": { "type": "number", "minimum": 0.5, "maximum": 10 },
+        "energyDecayPerHour": { "type": "number", "minimum": 0.5, "maximum": 10 },
+        "exposureSeverity": { "type": "number", "minimum": 0, "maximum": 3 },
+        "dangerMultiplier": { "type": "number", "minimum": 0.5, "maximum": 2.5 },
+        "diseaseRate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "dailyWageBase": { "type": "number", "minimum": 0 },
+        "foodPriceBase": { "type": "number", "minimum": 0 },
+        "deathSECost": { "type": "number", "minimum": 5, "maximum": 40 }
+      }
+    }
+  },
+  "$defs": {
+    "tier": { "type": "string", "enum": ["T0", "T1", "T2", "T3", "T4", "T5", "T6", "T7"] }
+  }
+}

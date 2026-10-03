@@ -1,0 +1,99 @@
+{
+  "schemaVersion": "1.0",
+  "id": "scene-millford-market",
+  "planetId": "planet-asterra",
+  "regionId": "region-millford",
+  "name": "Millford Market Square",
+  "description": "Mud and straw underfoot, the creak of the watermill behind the cottages. Fewer stalls than usual today, and people keep their distance from anyone who coughs.",
+  "tier": "T2",
+  "stylePreference": "realistic",
+  "bounds": { "sizeX": 80, "sizeZ": 80, "maxHeight": 25 },
+  "environment": {
+    "terrain": { "kind": "heightmap", "seed": "a3f19c04be7d2211", "amplitude": 1.5, "roughness": 0.3, "material": "muddy-cobblestone" },
+    "sky": { "kind": "hdri", "hdriAssetRef": "asset-ph-overcast-meadow", "timeOfDay": 10.5, "cloudCover": 0.6 },
+    "fog": { "color": "#b8c0b0", "density": 0.008 },
+    "lighting": {
+      "sun": { "color": "#fff1d6", "intensity": 2.2, "elevation": 0.7, "azimuth": 2.4, "castShadows": true },
+      "ambient": { "color": "#9fb0c0", "intensity": 0.5 }
+    },
+    "weather": "cloudy",
+    "ambientAudio": ["village-market", "watermill", "distant-bells"]
+  },
+  "budget": { "maxTriangles": 250000, "maxInstances": 300, "maxNewAssets": 6 },
+  "instances": [
+    {
+      "id": "inst-well",
+      "label": "Village well",
+      "assetRequest": { "query": "medieval stone well with wooden roof and bucket", "expectedSize": [2.5, 3.2, 2.5], "style": "realistic", "maxTriangles": 15000 },
+      "procedural": { "kind": "cylinder", "size": [2.2, 1.0, 2.2], "material": "fieldstone" },
+      "transform": { "position": [0, 0, 0] },
+      "placement": { "snapToGround": true, "collider": "convex", "avoidOverlap": true }
+    },
+    {
+      "id": "inst-cottages",
+      "label": "Thatched cottages",
+      "assetRequest": { "query": "medieval half-timbered cottage thatched roof", "expectedSize": [8, 7, 6], "style": "realistic", "maxTriangles": 25000 },
+      "procedural": { "kind": "building-block", "size": [8, 6, 6], "material": "plaster", "color": "#d8c9a8" },
+      "transform": { "position": [-25, 0, 20], "rotationY": 0.3 },
+      "count": 6,
+      "scatterRadius": 18,
+      "placement": { "snapToGround": true, "collider": "box", "avoidOverlap": true }
+    },
+    {
+      "id": "inst-bakery-stall",
+      "label": "Hilde's bread stall",
+      "assetRequest": { "query": "medieval market stall striped canvas awning", "expectedSize": [3, 2.6, 2], "style": "realistic", "maxTriangles": 12000 },
+      "procedural": { "kind": "stall", "size": [3, 2.6, 2], "material": "wood" },
+      "transform": { "position": [8, 0, -4], "rotationY": 3.14 }
+    },
+    {
+      "id": "inst-cart",
+      "label": "Hand cart",
+      "assetRef": "asset-ph-wooden-cart",
+      "transform": { "position": [12, 0, -4.5], "rotationY": 1.2 }
+    },
+    {
+      "id": "inst-barrels",
+      "label": "Barrels",
+      "assetRequest": { "query": "old wooden barrel", "expectedSize": [0.7, 1.0, 0.7], "style": "realistic", "maxTriangles": 3000 },
+      "procedural": { "kind": "cylinder", "size": [0.7, 1.0, 0.7], "material": "wood" },
+      "transform": { "position": [10, 0, -7] },
+      "count": 8,
+      "scatterRadius": 4
+    },
+    {
+      "id": "inst-watermill",
+      "label": "Watermill",
+      "assetRequest": { "query": "medieval watermill with water wheel", "expectedSize": [12, 10, 10], "style": "realistic", "maxTriangles": 40000 },
+      "procedural": { "kind": "building-block", "size": [12, 9, 10], "material": "fieldstone" },
+      "transform": { "position": [30, 0, -28], "rotationY": -0.6 }
+    },
+    {
+      "id": "inst-oaks",
+      "label": "Oak trees",
+      "procedural": { "kind": "tree", "size": [6, 10, 6], "material": "oak" },
+      "transform": { "position": [-30, 0, -30] },
+      "count": 12,
+      "scatterRadius": 10
+    }
+  ],
+  "spawnPoints": [
+    { "id": "spawn-square", "position": [0, 0, 8], "rotationY": 3.14, "purpose": "arrival" },
+    { "id": "spawn-cottage-door", "position": [-20, 0, 14], "rotationY": 0, "purpose": "birth" }
+  ],
+  "npcSpawns": [
+    { "npcId": "npc-hilde-baker", "position": [8, 0, -3], "behavior": "sell" },
+    { "roleHint": "coughing serf woman drawing water", "position": [1.5, 0, 1], "behavior": "idle" },
+    { "roleHint": "village reeve walking his rounds", "position": [-5, 0, -10], "behavior": "patrol" },
+    { "roleHint": "children playing", "position": [-8, 0, 5], "behavior": "wander" }
+  ],
+  "interactables": [
+    { "id": "int-well-water", "instanceId": "inst-well", "label": "Draw water", "verbs": ["use", "look"] },
+    { "id": "int-bread-stall", "instanceId": "inst-bakery-stall", "label": "Bread stall", "verbs": ["buy", "look"], "itemId": "item-rye-bread" },
+    { "id": "int-barrels", "instanceId": "inst-barrels", "label": "Barrels", "verbs": ["look", "hide"] }
+  ],
+  "exits": [
+    { "id": "exit-castle-road", "label": "Road to Castle Brannoc", "position": [0, 0, -40], "radius": 4, "to": { "regionId": "region-castle-brannoc", "pending": true } },
+    { "id": "exit-thornwood-path", "label": "Path into Thornwood", "position": [-40, 0, 0], "radius": 3, "to": { "regionId": "region-thornwood", "pending": true } }
+  ]
+}

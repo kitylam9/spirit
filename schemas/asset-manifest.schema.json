@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spirit.game/schemas/asset-manifest.schema.json",
+  "title": "Asset Manifest",
+  "description": "Record of an ingested asset, written by the deterministic ingest pipeline after the Asset Scout selects a candidate. Clients load only the URLs listed here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "name", "kind", "source", "license", "tags", "tiers", "style", "files", "ingest"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "id": { "type": "string", "pattern": "^asset-[a-z0-9-]+$" },
+    "name": { "type": "string", "maxLength": 120 },
+    "kind": { "type": "string", "enum": ["model", "character", "hdri", "material", "texture", "audio", "image"] },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "sourceId", "url"],
+      "properties": {
+        "name": { "type": "string", "enum": ["polyhaven", "kenney", "quaternius", "ambientcg", "smithsonian", "sketchfab", "objaverse", "texverse", "generated", "internal"] },
+        "sourceId": { "type": "string", "maxLength": 200 },
+        "url": { "type": "string", "format": "uri" },
+        "datasetRef": { "type": "string", "maxLength": 200, "description": "Dataset record id when discovered via Objaverse/TexVerse metadata." }
+      }
+    },
+    "license": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "url", "author", "attribution", "retrievedAt", "verifiedAt"],
+      "properties": {
+        "id": { "type": "string", "enum": ["CC0-1.0", "CC-BY-3.0", "CC-BY-4.0", "PUBLIC-DOMAIN", "INTERNAL"], "description": "Allow-list only. Anything else must be rejected before ingest." },
+        "url": { "type": "string", "format": "uri" },
+        "author": { "type": "string", "maxLength": 120 },
+        "authorUrl": { "type": "string", "format": "uri" },
+        "attribution": { "type": "string", "maxLength": 300, "description": "Ready-to-display credit line." },
+        "retrievedAt": { "type": "string", "format": "date-time" },
+        "verifiedAt": { "type": "string", "format": "date-time", "description": "When the license was re-checked at the original source." }
+      }
+    },
+    "tags": { "type": "array", "items": { "type": "string", "maxLength": 30 }, "maxItems": 20 },
+    "tiers": { "type": "array", "items": { "type": "string", "enum": ["T0", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "any"] }, "minItems": 1 },
+    "biomes": { "type": "array", "items": { "type": "string", "maxLength": 30 }, "maxItems": 10 },
+    "style": { "type": "string", "enum": ["realistic", "stylized", "low-poly"] },
+    "bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["size"],
+      "properties": {
+        "size": { "type": "array", "items": { "type": "number", "minimum": 0 }, "minItems": 3, "maxItems": 3, "description": "AABB size in meters after normalization." },
+        "pivot": { "type": "string", "enum": ["bottom-center", "center"], "default": "bottom-center" }
+      }
+    },
+    "scaleApplied": { "type": "number", "exclusiveMinimum": 0 },
+    "rigged": { "type": "boolean" },
+    "animations": { "type": "array", "items": { "type": "string", "maxLength": 30 }, "maxItems": 30 },
+    "files": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary"],
+      "properties": {
+        "primary": { "$ref": "#/$defs/file" },
+        "lods": { "type": "array", "items": { "$ref": "#/$defs/lod" }, "maxItems": 4 },
+        "thumbnail": { "$ref": "#/$defs/file" }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "triangles": { "type": "integer", "minimum": 0 },
+        "maxTextureSize": { "type": "integer", "minimum": 0 },
+        "pbrChannels": { "type": "array", "items": { "type": "string", "enum": ["baseColor", "normal", "metallicRoughness", "occlusion", "emissive"] }, "uniqueItems": true },
+        "score": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "ingest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pipelineVersion", "ingestedAt"],
+      "properties": {
+        "pipelineVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "ingestedAt": { "type": "string", "format": "date-time" },
+        "steps": { "type": "array", "items": { "type": "string", "maxLength": 60 } },
+        "requestedBy": { "type": "string", "maxLength": 80, "description": "Scene or task id that triggered ingestion." }
+      }
+    },
+    "disabled": { "type": "boolean", "default": false, "description": "Set on takedown; clients fall back to placeholders." }
+  },
+  "$defs": {
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "bytes", "sha256"],
+      "properties": {
+        "url": { "type": "string", "format": "uri" },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "mime": { "type": "string", "maxLength": 60 }
+      }
+    },
+    "lod": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "url", "triangles", "bytes"],
+      "properties": {
+        "level": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "url": { "type": "string", "format": "uri" },
+        "triangles": { "type": "integer", "minimum": 0 },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "maxDistance": { "type": "number", "minimum": 0 }
+      }
+    }
+  }
+}
