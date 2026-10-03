@@ -1,0 +1,26 @@
+{
+  "name": "@spirit/server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "llm:check": "tsx scripts/llm-check.ts",
+    "smoke": "tsx scripts/smoke.ts",
+    "validate:examples": "tsx scripts/validate-examples.ts"
+  },
+  "dependencies": {
+    "@spirit/shared": "0.1.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/ws": "^8.5.13",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

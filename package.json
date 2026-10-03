@@ -1,0 +1,25 @@
+{
+  "name": "spirit",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Spirit - an AI-native multi-dimension life simulation built with Three.js",
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "gen:types": "npm run gen -w @spirit/shared",
+    "dev": "concurrently -n server,client -c magenta,cyan \"npm run dev -w @spirit/server\" \"npm run dev -w @spirit/client\"",
+    "dev:server": "npm run dev -w @spirit/server",
+    "dev:client": "npm run dev -w @spirit/client",
+    "typecheck": "npm run typecheck -w @spirit/server && npm run typecheck -w @spirit/client",
+    "build": "npm run build -w @spirit/client",
+    "validate:examples": "npm run validate:examples -w @spirit/server",
+    "smoke": "npm run smoke -w @spirit/server",
+    "llm:check": "npm run llm:check -w @spirit/server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

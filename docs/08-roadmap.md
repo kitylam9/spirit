@@ -1,11 +1,29 @@
 # 08 — Roadmap
 
-## M0 — Design and contracts (current)
+## M0 — Design and contracts (done)
 
 - Design documents (`docs/`), JSON Schemas (`schemas/`), prompt templates (`prompts/`),
   examples (`examples/`).
-- **Exit criteria:** every example validates against its schema
-  (`npx -p ajv-cli@5 -p ajv-formats@3 ajv validate --spec=draft2020 --strict=false -c ajv-formats -s schemas/X.schema.json -d examples/...`).
+- **Exit criteria:** every example validates against its schema (`npm run validate:examples`).
+
+## v0.1 vertical slice (playable, current)
+
+A thin, end-to-end slice through M1–M4 so the loop can be played and tuned early:
+fly as a spirit, approach a planet (omen), be born or arrive, live (eat, work, rest, talk,
+travel between regions, face events), die, read the epitaph, return to space in a new
+universe with only Spirit Energy carried over.
+
+What it covers, and the deliberate simplifications versus the milestones below:
+
+| Area | In the slice | Simplified / deferred |
+| --- | --- | --- |
+| Server | Node `http` + `ws`, one session per player, JSON save files in `DATA_DIR` | Fastify, BullMQ, Postgres/pgvector, Redis (M2) |
+| LLM gateway | Ollama native, OpenAI-compatible (llama.cpp `llama-server`, LM Studio, OpenAI), `none`; JSON-schema / JSON-object / prompt-only modes; cache; timeouts | Anthropic provider, budgets, cost dashboard |
+| Agents | World Architect, Civilization, Scene Designer, NPC (create + dialogue), Narrative (events, goal, epitaph), UI Generator (HUD vocabulary) | Director, Rules/Balance agent, Asset Scout, Canon Keeper, Validator LLM checks |
+| Generation pattern | LLM returns small *draft* JSON (creative fields); code assembles full schema objects with procedural ids/numbers; Ajv validates; procedural fallback on any failure | Full-schema generation by the LLM |
+| Scenes | Procedural layout + procedural meshes (`procedural` instances), heightmap terrain, Sky shader | Asset ingest, CC0 catalogs, HDRIs (M3, M5) |
+| UI | Server-generated HUD per planet (`ui-layout`); other screens use client-built `ui-layout` trees rendered by the same whitelisted renderer | LLM-generated layouts for omen/dialogue/event/reflection (M5) |
+| Rules | Needs, hazards, disease, time skips, economy, SE accounting, death/restart | Combat, crafting, possession |
 
 ## M1 — Spirit in space
 
