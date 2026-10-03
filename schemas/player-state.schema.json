@@ -7,49 +7,19 @@
   "additionalProperties": false,
   "required": ["schemaVersion", "id", "universeSeed", "difficulty", "spirit", "location", "time", "pastLives", "canonSnapshotId"],
   "properties": {
-    "schemaVersion": { "const": "1.0" },
+    "schemaVersion": { "const": "1.1" },
     "id": { "type": "string", "pattern": "^player-[a-z0-9-]+$" },
-    "universeSeed": { "type": "string", "pattern": "^[0-9a-f]{16}$" },
+    "universeSeed": { "type": "string", "pattern": "^[0-9a-f]{16}$", "description": "Seed of the current universe. Replaced with a new seed after every death." },
     "difficulty": { "type": "string", "enum": ["wanderer", "seeker", "ascetic"] },
     "canonSnapshotId": { "type": "string", "maxLength": 80 },
     "spirit": {
       "type": "object",
+      "description": "The only state that survives death. Spirit Energy is the sole cross-life value.",
       "additionalProperties": false,
-      "required": ["energy", "memories", "memorySlots", "traits", "livesLived"],
+      "required": ["energy", "livesLived"],
       "properties": {
         "energy": { "type": "number", "minimum": 0, "maximum": 100 },
-        "memorySlots": { "type": "integer", "minimum": 1, "maximum": 12 },
-        "memories": {
-          "type": "array",
-          "maxItems": 12,
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["id", "text", "fromPlanetId", "effect"],
-            "properties": {
-              "id": { "type": "string", "pattern": "^mem-[a-z0-9-]+$" },
-              "text": { "type": "string", "maxLength": 200 },
-              "fromPlanetId": { "type": "string", "pattern": "^planet-[a-z0-9-]+$" },
-              "effect": { "type": "string", "enum": ["dialogue-unlock", "skill-bonus", "recognition", "insight"] },
-              "tags": { "type": "array", "items": { "type": "string", "maxLength": 30 }, "maxItems": 6 }
-            }
-          }
-        },
-        "traits": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["id", "name", "description"],
-            "properties": {
-              "id": { "type": "string", "pattern": "^trait-[a-z0-9-]+$" },
-              "name": { "type": "string", "maxLength": 40 },
-              "description": { "type": "string", "maxLength": 200 }
-            }
-          }
-        },
-        "livesLived": { "type": "integer", "minimum": 0 },
-        "insight": { "type": "number", "minimum": 0 }
+        "livesLived": { "type": "integer", "minimum": 0, "description": "Lives in the current run; reset when a new run starts." }
       }
     },
     "location": {
@@ -157,6 +127,7 @@
       }
     },
     "pastLives": {
+      "description": "Display-only log of previous lives in this run (reflection and run summary screens). Never passed to agents and has no gameplay effect.",
       "type": "array",
       "items": {
         "type": "object",

@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "required": ["schemaVersion", "id", "planetId", "kind", "title", "text", "pacing", "trigger"],
   "properties": {
-    "schemaVersion": { "const": "1.0" },
+    "schemaVersion": { "const": "1.1" },
     "id": { "type": "string", "pattern": "^evt-[a-z0-9-]+$" },
     "planetId": { "type": "string", "pattern": "^planet-[a-z0-9-]+$" },
     "regionId": { "type": "string", "pattern": "^region-[a-z0-9-]+$" },
@@ -104,7 +104,7 @@
       "properties": {
         "verb": {
           "type": "string",
-          "enum": ["move", "look", "talk", "give", "take", "use", "buy", "sell", "work", "rest", "eat", "attack", "flee", "hide", "craft", "learn", "travel", "incarnate.request", "reflect.choose", "travel.request", "ui.close", "ui.open", "ui.tab"]
+          "enum": ["move", "look", "talk", "give", "take", "use", "buy", "sell", "work", "rest", "eat", "attack", "flee", "hide", "craft", "learn", "travel", "incarnate.request", "reflect.continue", "travel.request", "ui.close", "ui.open", "ui.tab"]
         },
         "params": { "type": "object", "additionalProperties": { "type": ["string", "number", "boolean"] } }
       }

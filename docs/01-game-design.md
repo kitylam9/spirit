@@ -7,9 +7,11 @@ flowchart LR
   Drift[Drift in space as Spirit] --> Choose[Choose a planet]
   Choose --> Incarnate[Incarnate into a Vessel]
   Incarnate --> Live[Live: survive, act, relate]
-  Live --> Death[Death or Ascension]
-  Death --> Reflect[Reflection: keep Memories and Traits]
-  Reflect --> Drift
+  Live --> Death[Death]
+  Death --> Reflect[Reflection: epitaph and SE result]
+  Reflect -->|"SE above 0"| Reset[New universe generated]
+  Reset --> Drift
+  Reflect -->|"SE is 0"| RunOver[Run over]
 ```
 
 1. **Drift** — fly as a point of light through a star system. Planets are visible with
@@ -20,9 +22,12 @@ flowchart LR
    the planet's canon. The player may spend Spirit Energy to bias the roll.
 4. **Live** — the main gameplay: move through scenes, talk to NPCs, work, trade, fight,
    flee, build relationships, and pursue goals while keeping needs satisfied.
-5. **Death / Ascension** — the incarnation ends. Death costs SE; a fulfilled life refunds SE.
-6. **Reflect** — the Narrative agent writes an epitaph; the player chooses which Memories
-   to keep (limited slots) and may gain a Trait.
+5. **Death** — the incarnation ends. Death costs SE; a fulfilled life refunds some of it.
+6. **Reflect** — the Narrative agent writes an epitaph and the game shows the SE result.
+7. **Restart as a spirit** — if SE is still above 0, a brand-new universe is generated
+   (new seed, new star system, new planets and civilizations) and the player is a point of
+   light again, free to choose any planet. Nothing from the previous life carries over
+   except the remaining Spirit Energy (see §7).
 
 ## 2. The Spirit phase (space)
 
@@ -42,7 +47,7 @@ Landing is a cinematic dive through the atmosphere into a birth or arrival scene
 | --- | --- | --- |
 | **Born** | Start as a child or young adult in a family; longest, richest life. | 5 |
 | **Arrive** | Wake as an adult in a random role (traveler, worker, prisoner). | 10 |
-| **Possess** (unlock) | Enter an existing NPC whose story is in progress. | 20 |
+| **Possess** | Enter an existing NPC whose story is in progress. | 20 |
 
 Vessel selection is constrained by the civilization: a T2 planet offers peasants, artisans,
 soldiers, clergy, nobility; a T6 planet offers citizens, corporate workers, augmented
@@ -101,23 +106,29 @@ resolve them deterministically, while the LLM supplies content and flavor:
   "Escape the arcology", "Find your lost sister"). Completing goals raises fulfillment.
 - The Director balances pacing: quiet stretches, rising tension, climaxes.
 
-## 7. Progression across lives
+## 7. Death and restart
 
-- **Memories** (max 5 slots initially, +1 per 3 fulfilled lives): carried fragments such as
-  "How to forge steel", "The face of the Queen of Asterra", "The word that opens the vault".
-  Memories can surface as dialogue options, skill bonuses, or recognition of recurring
-  characters on other planets.
-- **Traits** (permanent): earned by notable lives, e.g. *Iron Will* (Resolve decays slower),
-  *Silver Tongue* (better first impressions), *Technomancer* (faster tech learning on T5+).
-- **Echoes:** the universe remembers the spirit's past lives. Returning to a planet later
-  may reveal the consequences of the previous incarnation (descendants, ruins, legends).
+Every death is a fresh start for everything except Spirit Energy.
+
+| On death | What happens |
+| --- | --- |
+| Vessel, stats, inventory, relationships, goals | Discarded |
+| Universe, star systems, planets, civilizations, NPCs, canon | Discarded; a new universe is generated from a new seed |
+| Spirit Energy | Carried over after applying the end-of-life `SE_delta` (§4) |
+| Past-life log | Kept for display only (epitaphs on the reflection screen); no gameplay effect |
+
+- The new universe is generated exactly like a new game: the player starts drifting in a
+  new star system and may choose any of its planets.
+- No knowledge, skills or bonuses carry over. The player's own experience is the only
+  thing that improves between lives.
+- Because the next universe is random, the Director pre-generates its first star system
+  (planets and omens) during the reflection screen so the restart feels instant.
 
 ## 8. Failure and end states
 
-- **Spirit extinguished** (SE = 0): game over; the universe and its canon can be kept as a
-  "legacy world" for a new spirit.
-- **Transcendence** (long-term goal): accumulate enough Insight across all four dimensions
-  and lives on every tier to ascend. Ending is AI-written from the spirit's whole history.
+- **Run over** (SE = 0 after a death, or while drifting in space): the spirit is
+  extinguished. The game shows a summary of all lives in the run, then a new run starts
+  with full SE.
 
 ## 9. Difficulty settings
 
@@ -125,4 +136,4 @@ resolve them deterministically, while the LLM supplies content and flavor:
 | --- | --- | --- | --- |
 | Wanderer | ×0.5 | ×0.5 | Story-focused |
 | Seeker | ×1 | ×1 | Default |
-| Ascetic | ×1.5 | ×1.5 | Permadeath for vessels, harsher events |
+| Ascetic | ×1.5 | ×1.5 | Harsher events; SE cannot be spent to bias incarnation |

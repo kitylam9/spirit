@@ -20,7 +20,7 @@ overlay) while staying clear and usable.
 ## Component library
 
 `Panel`, `Stack`, `Text`, `Stat`, `Bar`, `Button`, `Choice`, `Dialog`, `TextInput`,
-`Inventory`, `Map`, `Image`, `Toast`, `MemoryPicker`, `Divider`.
+`Inventory`, `Map`, `Image`, `Toast`, `Divider`.
 Only `Panel`, `Stack` and `Dialog` may have children. See `docs/05-dynamic-ui.md` §3 for props.
 
 ## Rules
@@ -42,7 +42,7 @@ Only `Panel`, `Stack` and `Dialog` may have children. See `docs/05-dynamic-ui.md
 - Theme / accent: {{theme}} / {{accent}}
 - Civilization vocabulary hints: {{vocabulary}}
 - Available bindings: {{available_bindings}}
-- Content to show (event, NPC, choices, memories...): {{content}}
+- Content to show (event, NPC, choices, epitaph...): {{content}}
 {{repair_issues}}
 
 ## Output

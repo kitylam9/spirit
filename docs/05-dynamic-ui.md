@@ -29,7 +29,7 @@ that the client renders with a fixed library of components.
 | `dialogue` | Talking to an NPC | Portrait, Text (stream), TextInput, Choice |
 | `event` | Event triggers | Panel, Text, Image, Choice |
 | `inventory` | Player opens it | Inventory grid, Text, Button |
-| `reflection` | After death | Text (epitaph), MemoryPicker, Stat (SE delta) |
+| `reflection` | After death | Text (epitaph), Stat (SE delta, SE remaining), Button (return to space, or start a new run when SE is 0) |
 | `menu` | Pause/system | List, Button (fixed actions only) |
 
 ## 3. Component library (v1)
@@ -49,7 +49,6 @@ that the client renders with a fixed library of components.
 | `Map` | `kind` (`minimap`/`region`/`system`), `bind` | no |
 | `Image` | `assetId` (2D asset from manifest) | no |
 | `Toast` | `text`, `durationMs`, `tone` | no |
-| `MemoryPicker` | `bind` (candidate memories), `slots` | no |
 | `Divider` | `variant` | no |
 
 Limits: max depth 6, max 60 nodes per layout, text ≤ 600 chars per node.
@@ -64,7 +63,7 @@ An action is a verb plus parameters, identical to what the player could send man
 
 Allowed UI-only actions: `ui.close`, `ui.open` (screen kind), `ui.tab`.
 Everything else must be a verb from `01-game-design.md` §5 or a system message
-(`incarnate.request`, `reflect.choose`, `travel.request`).
+(`incarnate.request`, `reflect.continue`, `travel.request`).
 
 ## 5. Data binding
 
@@ -103,7 +102,7 @@ within contrast limits (WCAG AA is enforced by the client; failing overrides are
 
 ```json
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "id": "ui-event-plague-rumor",
   "screen": "event",
   "theme": "parchment",

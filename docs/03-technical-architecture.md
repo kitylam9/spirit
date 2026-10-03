@@ -95,7 +95,8 @@ All messages are JSON over WebSocket with an envelope:
 ```
 
 Client → server: `hello`, `action` (verb + params), `dialogue.say`, `travel.request`,
-`incarnate.request`, `reflect.choose`, `save`, `ping`.
+`incarnate.request`, `reflect.continue` (leave the reflection screen; the server
+starts a new universe, or a new run if SE is 0), `save`, `ping`.
 
 Server → client: `state.update` (player-state diff), `planet.detail`, `scene.full`,
 `scene.patch` (JSON Patch RFC 6902, used for streaming partial scenes), `npc.say`

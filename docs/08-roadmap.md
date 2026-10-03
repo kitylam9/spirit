@@ -40,7 +40,8 @@
 - Rules engine: needs, verbs, time, economy, combat (simple), SE accounting.
 - Incarnation modes (Born, Arrive), vessels, goals.
 - NPC agent (creation + streamed dialogue with intents).
-- Narrative agent events and pacing; death, epitaph, reflection, Memories, Traits.
+- Narrative agent events and pacing; death, epitaph, reflection, then restart as a spirit
+  in a newly generated universe (only Spirit Energy carries over).
 - **Exit:** a full life can be played from birth to death on T2 and T6 planets.
 
 ## M5 — Fully dynamic
@@ -54,9 +55,9 @@
 
 ## Later
 
-- Possession incarnation mode, echoes of past lives on revisited planets.
+- Possession incarnation mode.
 - Cross-planet politics on T6+ systems.
 - Text-to-3D generation for missing hero assets.
 - Voice for NPCs (TTS), music generation per civilization.
-- Multiplayer: spirits meeting in space; shared legacy universes.
+- Multiplayer: spirits meeting in space.
 - WebGPU renderer path, mobile support.

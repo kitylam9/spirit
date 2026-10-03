@@ -221,14 +221,17 @@ sequenceDiagram
 | Land | Birth region scene + NPCs + HUD + first goals |
 | In region | Adjacent scenes pre-generated at low priority |
 | Leave planet | Planet summarized and compressed in canon |
+| Player death | Epitaph; old canon archived; new universe seed drawn; first star system of the new universe pre-generated during the reflection screen |
 
 ## 6. Memory
 
-- **Canon store:** authoritative facts (structured JSON per entity, versioned).
+- **Canon store:** authoritative facts (structured JSON per entity, versioned), scoped to
+  the current universe. Agents never retrieve canon from a previous life's universe.
 - **Semantic memory:** embeddings of canon summaries and dialogue highlights for retrieval.
 - **Session memory:** rolling summary of the current life (updated every N events by the
   Narrative agent in `fast` tier) to keep prompts short.
-- **Spirit memory:** cross-life Memories and Traits from `player-state`.
+- Nothing from previous lives is given to agents. The only cross-life value, Spirit Energy,
+  is owned by the rules engine.
 
 ## 7. Failure handling
 

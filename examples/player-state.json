@@ -1,26 +1,12 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "id": "player-lam",
   "universeSeed": "c0ffee1234abcd99",
   "difficulty": "seeker",
   "canonSnapshotId": "canon-000143",
   "spirit": {
     "energy": 62.5,
-    "memorySlots": 5,
-    "memories": [
-      {
-        "id": "mem-steel-and-fire",
-        "text": "The rhythm of the hammer on hot steel, learned at a forge on a world of ash.",
-        "fromPlanetId": "planet-kessar-prime",
-        "effect": "skill-bonus",
-        "tags": ["craft", "smithing"]
-      }
-    ],
-    "traits": [
-      { "id": "trait-iron-will", "name": "Iron Will", "description": "Resolve decays 25% slower." }
-    ],
-    "livesLived": 1,
-    "insight": 14
+    "livesLived": 1
   },
   "location": {
     "phase": "planet",
@@ -46,8 +32,8 @@
   "time": { "tick": 1840, "realSecondsPlayed": 2950 },
   "pastLives": [
     {
-      "lifeId": "life-kessar-dex",
-      "planetId": "planet-kessar-prime",
+      "lifeId": "life-ombra-dex",
+      "planetId": "planet-ombra",
       "vesselName": "Dex-44",
       "yearsLived": 23,
       "causeOfDeath": "Acid storm in the Ashfields",

@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "required": ["schemaVersion", "id", "screen", "theme", "root"],
   "properties": {
-    "schemaVersion": { "const": "1.0" },
+    "schemaVersion": { "const": "1.1" },
     "id": { "type": "string", "pattern": "^ui-[a-z0-9-]+$" },
     "screen": { "type": "string", "enum": ["hud", "space-hud", "omen", "dialogue", "event", "inventory", "reflection", "menu"] },
     "theme": { "type": "string", "enum": ["spirit", "organic", "bone-and-ochre", "parchment", "ink-and-brass", "steam-and-iron", "flat-digital", "neon-holo", "luminous-minimal"] },
@@ -24,7 +24,7 @@
       "properties": {
         "verb": {
           "type": "string",
-          "enum": ["move", "look", "talk", "give", "take", "use", "buy", "sell", "work", "rest", "eat", "attack", "flee", "hide", "craft", "learn", "travel", "incarnate.request", "reflect.choose", "travel.request", "dialogue.say", "ui.close", "ui.open", "ui.tab"]
+          "enum": ["move", "look", "talk", "give", "take", "use", "buy", "sell", "work", "rest", "eat", "attack", "flee", "hide", "craft", "learn", "travel", "incarnate.request", "reflect.continue", "travel.request", "dialogue.say", "ui.close", "ui.open", "ui.tab"]
         },
         "params": { "type": "object", "additionalProperties": { "type": ["string", "number", "boolean"] } }
       }
@@ -36,7 +36,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["Panel", "Stack", "Text", "Stat", "Bar", "Button", "Choice", "Dialog", "TextInput", "Inventory", "Map", "Image", "Toast", "MemoryPicker", "Divider"]
+          "enum": ["Panel", "Stack", "Text", "Stat", "Bar", "Button", "Choice", "Dialog", "TextInput", "Inventory", "Map", "Image", "Toast", "Divider"]
         },
         "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
         "props": { "$ref": "#/$defs/props" },
@@ -44,7 +44,7 @@
       },
       "allOf": [
         {
-          "if": { "properties": { "type": { "enum": ["Text", "Stat", "Bar", "Button", "Choice", "TextInput", "Inventory", "Map", "Image", "Toast", "MemoryPicker", "Divider"] } } },
+          "if": { "properties": { "type": { "enum": ["Text", "Stat", "Bar", "Button", "Choice", "TextInput", "Inventory", "Map", "Image", "Toast", "Divider"] } } },
           "then": { "not": { "required": ["children"] } }
         },
         {
@@ -56,7 +56,7 @@
           "then": { "required": ["props"], "properties": { "props": { "type": "object", "required": ["options"] } } }
         },
         {
-          "if": { "properties": { "type": { "enum": ["Stat", "Bar", "Inventory", "MemoryPicker"] } } },
+          "if": { "properties": { "type": { "enum": ["Stat", "Bar", "Inventory"] } } },
           "then": { "required": ["props"], "properties": { "props": { "type": "object", "required": ["bind"] } } }
         }
       ]
@@ -107,8 +107,7 @@
         "columns": { "type": "integer", "minimum": 1, "maximum": 10 },
         "kind": { "type": "string", "enum": ["minimap", "region", "system"] },
         "durationMs": { "type": "integer", "minimum": 500, "maximum": 15000 },
-        "tone": { "type": "string", "enum": ["info", "good", "bad", "mystic"] },
-        "slots": { "type": "integer", "minimum": 1, "maximum": 12 }
+        "tone": { "type": "string", "enum": ["info", "good", "bad", "mystic"] }
       }
     }
   }
