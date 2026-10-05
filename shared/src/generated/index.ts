@@ -2,6 +2,7 @@ export type { AssetManifest } from "./asset-manifest.js";
 export type { Civilization } from "./civilization.js";
 export type { NPC } from "./entity-npc.js";
 export type { Event } from "./event.js";
+export type { FoundObject } from "./found-object.js";
 export type { Planet } from "./planet.js";
 export type { PlayerState } from "./player-state.js";
 export type { Scene } from "./scene.js";

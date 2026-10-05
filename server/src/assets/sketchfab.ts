@@ -83,7 +83,7 @@ async function ingest(uid: string, req: ScoutRequest): Promise<AssetManifest> {
   const author = m.user.displayName || m.user.username;
   const sourceUrl = m.viewerUrl ?? `https://sketchfab.com/3d-models/${uid}`;
   return register({
-    schemaVersion: "1.0",
+    schemaVersion: "1.1",
     id,
     name: clip(m.name, 120),
     kind: "model",

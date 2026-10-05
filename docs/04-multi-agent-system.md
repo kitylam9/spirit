@@ -42,7 +42,7 @@ flowchart TD
 | **Narrative** | Events, goals, epitaphs, omens, life story beats | Timers, player milestones, death | `event` | strong | async | Event deck of templated events |
 | **NPC** | Creates NPCs; plays them in dialogue | Scene population; `dialogue.say` | `entity-npc`; dialogue reply (section 4.4) | fast (dialogue), strong (creation) | first token < 1 s | Canned lines by role |
 | **Scene Designer** | Lays out playable 3D scenes; requests assets | Enter region/scene | `scene` | strong | minimal scene < 3 s; full < 15 s | Procedural scene generator per biome |
-| **Asset Scout** | Finds, licenses, downloads and prepares 3D assets | Asset requests from Scene Designer | `asset-manifest` | fast + tools | async per asset | Procedural/primitive placeholder |
+| **Asset Scout** | Finds, licenses, downloads and prepares 3D assets; appraises random Objaverse-XL objects that the spirit builds its body from (`09-found-bodies.md`) | Asset requests from Scene Designer; scene creation (12 found objects, one batched call) | `asset-manifest`, `found-object` | fast + tools | async per asset | Procedural/primitive placeholder; names from titles and a keyword tag table |
 | **UI Generator** | Builds tier-themed UI layouts and contextual choices | Scene load, events, dialogue, menus | `ui-layout` | fast | < 1.5 s | Default layout per screen |
 | **Rules/Balance** | Tunes numeric parameters for planet/tier/vessel within allowed ranges | Planet detail pass, incarnation | `balance` block inside `civilization` | fast | < 2 s | Tier default parameters |
 | **Validator** | Schema + canon + safety checks; requests repairs | Every agent output | pass/fail + issues | fast (LLM part) | < 1 s | Reject → fallback of the producing agent |

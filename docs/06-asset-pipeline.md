@@ -36,6 +36,7 @@ Ordered by default priority (license clarity first, then quality and size).
 | [Smithsonian Open Access](https://www.si.edu/openaccess) | Scanned artifacts | CC0 (check per item) | API | Historical objects for T1–T4 |
 | [Sketchfab](https://sketchfab.com) | Huge model library | Per model (CC0, CC-BY, ...) | Data API v3 (downloadable + license filter, requires API token) | Only `downloadable=true` and allowed licenses |
 | [Objaverse](https://objaverse.allenai.org) | ~800k+ models (mostly Sketchfab-sourced) | Per object | Python package / HF dataset metadata | Use metadata for search; verify license per object |
+| [Objaverse-XL](https://huggingface.co/datasets/allenai/objaverse-xl) | 10M+ objects from Sketchfab, GitHub, Thingiverse, Smithsonian | Per object (~3M CC0/CC-BY) | Per-source Parquet metadata on Hugging Face, sampled with HTTP range reads | Random found objects for player bodies (`09-found-bodies.md` §4) |
 | [TexVerse](https://github.com/yiboz2001/TexVerse) | High-resolution textured 3D models dataset | Per object (sourced from Sketchfab) | GitHub / dataset metadata | High texture quality; **per-object license check required** |
 | Generated (future) | Text-to-3D (e.g. TRELLIS, Hunyuan3D) | Our own output | Self-hosted | Last resort before primitives; review model license |
 

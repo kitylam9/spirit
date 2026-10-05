@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0",
+  "id": "obj-blue-crab",
+  "assetRef": "asset-si-blue-crab-ab7548",
+  "name": "Blue Crab",
+  "description": "A museum scan of a blue crab, claws raised as if it has opinions about you.",
+  "tags": ["armored", "sharp", "shiny"],
+  "traits": { "sturdy": 5, "nimble": 2, "clever": 2, "charming": 3 },
+  "suggestedSize": 0.5,
+  "unsuitable": false
+}

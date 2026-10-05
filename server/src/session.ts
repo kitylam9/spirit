@@ -69,6 +69,8 @@ export class Session {
     if (existsSync(file)) {
       try {
         const save = JSON.parse(readFileSync(file, "utf8")) as SaveFile;
+        // 1.1 -> 1.2 only added optional fields.
+        save.player.schemaVersion = "1.2";
         const s = new Session(save.player);
         s.world = save.world;
         s.life = save.life;

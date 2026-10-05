@@ -6,7 +6,7 @@ export type Stat = number;
  * Authoritative player state owned by the rules engine. Agents receive read-only summaries of it; they never write it directly.
  */
 export interface PlayerState {
-  schemaVersion: "1.1";
+  schemaVersion: "1.2";
   id: string;
   /**
    * Seed of the current universe. Replaced with a new seed after every death.
@@ -38,10 +38,13 @@ export interface PlayerState {
   };
   incarnation?: {
     id: string;
-    mode: "born" | "arrive" | "possess";
+    /**
+     * New lives are `assembled` (docs/09-found-bodies.md); `born` and `arrive` remain for saves made before 1.2.
+     */
+    mode: "assembled" | "born" | "arrive" | "possess";
     planetId: string;
     vessel: {
-      kind: "humanoid" | "animal" | "android" | "hive-drone" | "uploaded-mind" | "other";
+      kind: "assembled" | "humanoid" | "animal" | "android" | "hive-drone" | "uploaded-mind" | "other";
       species: string;
       role: string;
       name: string;
@@ -89,6 +92,16 @@ export interface PlayerState {
     }[];
     fulfillment?: number;
     startedAtTick: number;
+    /**
+     * Found-object body of an `assembled` life: a core plus up to 8 parts placed relative to it.
+     */
+    body?: {
+      core: BodyPart;
+      /**
+       * @maxItems 8
+       */
+      parts: BodyPart[];
+    };
   } | null;
   time: {
     tick: number;
@@ -106,4 +119,29 @@ export interface PlayerState {
     epitaph: string;
     seDelta: number;
   }[];
+}
+export interface BodyPart {
+  partId: string;
+  /**
+   * The found-object this part is made of.
+   */
+  objectId: string;
+  /**
+   * Meters, relative to the core's center. Zero for the core.
+   *
+   * @minItems 3
+   * @maxItems 3
+   */
+  position: number[];
+  /**
+   * Euler XYZ in radians.
+   *
+   * @minItems 3
+   * @maxItems 3
+   */
+  rotation: number[];
+  /**
+   * Player-chosen multiplier on the normalized size.
+   */
+  scale: number;
 }

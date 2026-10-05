@@ -25,6 +25,7 @@ scene.
 | [docs/06-asset-pipeline.md](docs/06-asset-pipeline.md) | How free 3D models are discovered, licensed, optimized and placed |
 | [docs/07-safety-and-consistency.md](docs/07-safety-and-consistency.md) | Guardrails, canon memory, determinism, cost control |
 | [docs/08-roadmap.md](docs/08-roadmap.md) | Milestones from docs to playable game |
+| [docs/09-found-bodies.md](docs/09-found-bodies.md) | How the spirit builds a body from random Objaverse-XL objects (next milestone) |
 
 Machine-readable contracts:
 

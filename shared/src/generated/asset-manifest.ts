@@ -4,7 +4,7 @@
  * Record of an ingested asset, written by the deterministic ingest pipeline after the Asset Scout selects a candidate. Clients load only the URLs listed here.
  */
 export interface AssetManifest {
-  schemaVersion: "1.0";
+  schemaVersion: "1.1";
   id: string;
   name: string;
   kind: "model" | "character" | "hdri" | "material" | "texture" | "audio" | "image";
@@ -16,6 +16,8 @@ export interface AssetManifest {
       | "ambientcg"
       | "smithsonian"
       | "sketchfab"
+      | "github"
+      | "thingiverse"
       | "objaverse"
       | "texverse"
       | "generated"
@@ -23,7 +25,7 @@ export interface AssetManifest {
     sourceId: string;
     url: string;
     /**
-     * Dataset record id when discovered via Objaverse/TexVerse metadata.
+     * Dataset record id when discovered via Objaverse/TexVerse metadata (for Objaverse-XL: the row's sha256).
      */
     datasetRef?: string;
   };

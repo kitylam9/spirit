@@ -20,7 +20,8 @@ documents, JSON Schemas, prompt templates and examples.
 ## Conventions
 
 - Identifiers: `kebab-case` for ids of generated entities, prefixed by type
-  (`planet-`, `civ-`, `scene-`, `npc-`, `evt-`, `asset-`, `ui-`).
+  (`planet-`, `civ-`, `scene-`, `npc-`, `evt-`, `asset-`, `ui-`, `obj-` for found objects,
+  `part-` for body parts).
 - Units: meters, seconds, radians. Up axis is +Y. Three.js right-handed coordinates.
 - Time in game: `tick` (integer, 1 tick = 1 in-game minute on a planet surface).
 - All generated JSON must include `schemaVersion` and `id`.

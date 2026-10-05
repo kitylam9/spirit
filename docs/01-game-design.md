@@ -18,8 +18,9 @@ flowchart LR
    hints of their civilization (city lights, smog, ring stations, untouched forests).
 2. **Choose** — approaching a planet reveals a short AI-written *omen*: tier, mood, danger,
    and one hook ("A plague spreads through the river cities").
-3. **Incarnate** — descend; the game rolls a vessel and birth circumstances consistent with
-   the planet's canon. The player may spend Spirit Energy to bias the roll.
+3. **Incarnate** — descend as a wisp and build a body from random real 3D objects lying on
+   the planet; the life begins when the first object becomes your core
+   (`09-found-bodies.md`).
 4. **Live** — the main gameplay: move through scenes, talk to NPCs, work, trade, fight,
    flee, build relationships, and pursue goals while keeping needs satisfied.
 5. **Death** — the incarnation ends. Death costs SE; a fulfilled life refunds some of it.
@@ -41,13 +42,17 @@ flowchart LR
 
 ## 3. Incarnation
 
-Landing is a cinematic dive through the atmosphere into a birth or arrival scene.
+Landing is a cinematic dive through the atmosphere. Since `player-state` 1.2 the spirit
+lands as a wisp and assembles a **found body** out of objects scattered on the planet; see
+`09-found-bodies.md` for the full design.
 
 | Incarnation mode | Description | SE cost |
 | --- | --- | --- |
-| **Born** | Start as a child or young adult in a family; longest, richest life. | 5 |
-| **Arrive** | Wake as an adult in a random role (traveler, worker, prisoner). | 10 |
-| **Possess** | Enter an existing NPC whose story is in progress. | 20 |
+| **Assembled** | Land as a wisp, collect objects, and live in the body they form. | 5 |
+| **Possess** (later) | Enter an existing NPC whose story is in progress. | 20 |
+
+*Born* and *Arrive* (5 and 10 SE) are retired; saves from before 1.2 finish their current
+life in that mode.
 
 Vessel selection is constrained by the civilization: a T2 planet offers peasants, artisans,
 soldiers, clergy, nobility; a T6 planet offers citizens, corporate workers, augmented

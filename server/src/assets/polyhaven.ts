@@ -79,7 +79,7 @@ async function ingest(phId: string, a: PhAsset, req: ScoutRequest): Promise<Asse
   const now = new Date().toISOString();
   const author = Object.keys(a.authors).join(", ") || "Poly Haven";
   return register({
-    schemaVersion: "1.0",
+    schemaVersion: "1.1",
     id,
     name: clip(a.name, 120),
     kind: "model",

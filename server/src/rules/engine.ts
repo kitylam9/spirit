@@ -28,7 +28,7 @@ export function balanceOf(civ: Civilization): Balance {
 
 export function newPlayer(id: string, difficulty: Difficulty = "seeker"): PlayerState {
   return {
-    schemaVersion: "1.1",
+    schemaVersion: "1.2",
     id,
     universeSeed: newSeed(),
     difficulty,

@@ -25,6 +25,14 @@ What it covers, and the deliberate simplifications versus the milestones below:
 | UI | Server-generated HUD per planet (`ui-layout`); other screens use client-built `ui-layout` trees rendered by the same whitelisted renderer | LLM-generated layouts for omen/dialogue/event/reflection (M5) |
 | Rules | Needs, hazards, disease, time skips, economy, SE accounting, death/restart | Combat, crafting, possession |
 
+## v0.2 — Found bodies (designed, next)
+
+Replace *Born*/*Arrive* with a SWAPMEAT-style found body (`09-found-bodies.md`): land as a
+wisp, collect random CC0/CC-BY objects from Objaverse-XL, stick them together free-form,
+lose parts on heavy hits. Contracts are in place (`player-state` 1.2, `found-object` 1.0,
+`asset-manifest` 1.1, `prompts/object-appraiser.md`); the server pool, appraisal, wisp and
+placement controls are still to be built.
+
 ## M1 — Spirit in space
 
 - Client scaffold: Vite + TypeScript + Three.js.

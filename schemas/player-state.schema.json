@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "required": ["schemaVersion", "id", "universeSeed", "difficulty", "spirit", "location", "time", "pastLives", "canonSnapshotId"],
   "properties": {
-    "schemaVersion": { "const": "1.1" },
+    "schemaVersion": { "const": "1.2" },
     "id": { "type": "string", "pattern": "^player-[a-z0-9-]+$" },
     "universeSeed": { "type": "string", "pattern": "^[0-9a-f]{16}$", "description": "Seed of the current universe. Replaced with a new seed after every death." },
     "difficulty": { "type": "string", "enum": ["wanderer", "seeker", "ascetic"] },
@@ -41,14 +41,14 @@
       "required": ["id", "mode", "planetId", "vessel", "stats", "relationships", "inventory", "goals", "startedAtTick"],
       "properties": {
         "id": { "type": "string", "pattern": "^life-[a-z0-9-]+$" },
-        "mode": { "type": "string", "enum": ["born", "arrive", "possess"] },
+        "mode": { "type": "string", "enum": ["assembled", "born", "arrive", "possess"], "description": "New lives are `assembled` (docs/09-found-bodies.md); `born` and `arrive` remain for saves made before 1.2." },
         "planetId": { "type": "string", "pattern": "^planet-[a-z0-9-]+$" },
         "vessel": {
           "type": "object",
           "additionalProperties": false,
           "required": ["kind", "species", "role", "name", "age", "lifespan"],
           "properties": {
-            "kind": { "type": "string", "enum": ["humanoid", "animal", "android", "hive-drone", "uploaded-mind", "other"] },
+            "kind": { "type": "string", "enum": ["assembled", "humanoid", "animal", "android", "hive-drone", "uploaded-mind", "other"] },
             "species": { "type": "string", "maxLength": 40 },
             "role": { "type": "string", "maxLength": 60 },
             "name": { "type": "string", "maxLength": 60 },
@@ -114,7 +114,17 @@
           }
         },
         "fulfillment": { "type": "number", "minimum": 0, "maximum": 100 },
-        "startedAtTick": { "type": "integer", "minimum": 0 }
+        "startedAtTick": { "type": "integer", "minimum": 0 },
+        "body": {
+          "type": "object",
+          "description": "Found-object body of an `assembled` life: a core plus up to 8 parts placed relative to it.",
+          "additionalProperties": false,
+          "required": ["core", "parts"],
+          "properties": {
+            "core": { "$ref": "#/$defs/bodyPart" },
+            "parts": { "type": "array", "maxItems": 8, "items": { "$ref": "#/$defs/bodyPart" } }
+          }
+        }
       }
     },
     "time": {
@@ -146,6 +156,18 @@
     }
   },
   "$defs": {
-    "stat": { "type": "number", "minimum": 0, "maximum": 100 }
+    "stat": { "type": "number", "minimum": 0, "maximum": 100 },
+    "bodyPart": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["partId", "objectId", "position", "rotation", "scale"],
+      "properties": {
+        "partId": { "type": "string", "pattern": "^part-[a-z0-9-]+$" },
+        "objectId": { "type": "string", "pattern": "^obj-[a-z0-9-]+$", "description": "The found-object this part is made of." },
+        "position": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3, "description": "Meters, relative to the core's center. Zero for the core." },
+        "rotation": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3, "description": "Euler XYZ in radians." },
+        "scale": { "type": "number", "minimum": 0.5, "maximum": 2, "description": "Player-chosen multiplier on the normalized size." }
+      }
+    }
   }
 }

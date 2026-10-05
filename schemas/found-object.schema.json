@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spirit.game/schemas/found-object.schema.json",
+  "title": "Found Object",
+  "description": "A random Objaverse-XL object lying on a planet, appraised by the Asset Scout so the spirit can use it as a body part (docs/09-found-bodies.md). The LLM writes name, description, tags and unsuitable; code derives traits from tags.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "assetRef", "name", "description", "tags", "traits"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "id": { "type": "string", "pattern": "^obj-[a-z0-9-]+$" },
+    "assetRef": { "type": "string", "pattern": "^asset-[a-z0-9-]+$", "description": "The ingested model (asset-manifest)." },
+    "name": { "type": "string", "minLength": 1, "maxLength": 40 },
+    "description": { "type": "string", "maxLength": 160 },
+    "tags": {
+      "type": "array",
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "heavy", "sturdy", "armored", "stone", "metal",
+          "light", "wheeled", "winged", "springy", "fast",
+          "electronic", "mechanical", "bookish", "precise",
+          "pretty", "cute", "shiny", "musical", "tasty",
+          "scary", "sharp", "fragile"
+        ]
+      }
+    },
+    "traits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sturdy", "nimble", "clever", "charming"],
+      "properties": {
+        "sturdy": { "$ref": "#/$defs/trait" },
+        "nimble": { "$ref": "#/$defs/trait" },
+        "clever": { "$ref": "#/$defs/trait" },
+        "charming": { "$ref": "#/$defs/trait" }
+      }
+    },
+    "suggestedSize": { "type": "number", "minimum": 0.2, "maximum": 1.8, "description": "Largest side in meters when attached." },
+    "unsuitable": { "type": "boolean", "default": false, "description": "Set by the appraiser for content outside the Teen rating; such objects are never spawned." }
+  },
+  "$defs": {
+    "trait": { "type": "integer", "minimum": 0, "maximum": 10 }
+  }
+}

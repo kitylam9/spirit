@@ -1,6 +1,6 @@
 ---
 id: npc
-version: 1.0.0
+version: 1.1.0
 agent: NPC
 modelTier: strong (create) / fast (dialogue)
 temperature: 0.8
@@ -48,9 +48,12 @@ Create output: a JSON array of objects, each valid against `entity-npc.schema.js
    `become_hostile`, `flee`, `follow`, `call_guard`, `end_conversation`.
    Only offer items you own (see inventory).
 6. `opinionDelta` between −10 and +10.
+7. The player is usually a spirit wearing a body of found objects (`{{player_body}}`, e.g.
+   "a copper kettle with a gear for an arm and a crab on top"). React to it as your
+   character would: curiosity, fear, amusement, or customs of your tier.
 
 Dialogue input: NPC sheet {{npc}}, conversation so far {{history}}, player vessel
-{{player_vessel}}, scene {{scene_summary}}, and:
+{{player_vessel}}, player body {{player_body}}, scene {{scene_summary}}, and:
 
 <player_speech>{{player_text}}</player_speech>
 

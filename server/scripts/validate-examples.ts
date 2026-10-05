@@ -14,6 +14,7 @@ const SCHEMA_FOR: Record<string, SchemaName> = {
   "ui-hud": "ui-layout",
   "player-state": "player-state",
   "asset-manifest": "asset-manifest",
+  "found-object": "found-object",
 };
 
 const files: string[] = [];

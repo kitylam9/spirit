@@ -12,6 +12,7 @@ export type SchemaName =
   | "event"
   | "ui-layout"
   | "asset-manifest"
+  | "found-object"
   | "player-state";
 
 const schemasDir = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "schemas");
