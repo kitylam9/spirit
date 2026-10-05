@@ -6,22 +6,26 @@ import type { JsonMode } from "../config.js";
  * LM Studio, vLLM, Ollama's `/v1` endpoint and OpenAI itself.
  */
 export class OpenAICompatibleProvider implements LLMProvider {
-  private apiBase: string;
+  protected apiBase: string;
 
   constructor(
     readonly id: string,
     baseUrl: string,
     readonly model: string,
-    private apiKey: string,
+    protected apiKey: string,
     private jsonMode: JsonMode,
   ) {
     this.apiBase = baseUrl.endsWith("/v1") ? baseUrl : `${baseUrl}/v1`;
   }
 
-  private headers(): Record<string, string> {
+  protected headers(): Record<string, string> {
     const h: Record<string, string> = { "content-type": "application/json" };
     if (this.apiKey) h.authorization = `Bearer ${this.apiKey}`;
     return h;
+  }
+
+  protected extraBody(): Record<string, unknown> {
+    return {};
   }
 
   async complete(req: CompletionRequest): Promise<string> {
@@ -41,6 +45,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
         temperature: req.temperature,
         max_tokens: req.maxTokens,
         response_format,
+        ...this.extraBody(),
       }),
     });
     if (!res.ok) throw new Error(`${this.id} ${res.status}: ${(await res.text()).slice(0, 300)}`);

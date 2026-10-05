@@ -5,6 +5,7 @@ import type { LlmStatus } from "@spirit/shared";
 import type { ChatMessage, LLMProvider } from "./types.js";
 import { OllamaProvider } from "./ollama.js";
 import { OpenAICompatibleProvider } from "./openaiCompatible.js";
+import { OpenRouterProvider } from "./openrouter.js";
 
 export interface JsonRequest {
   /** Agent name, used for logging and cache keys. */
@@ -28,6 +29,8 @@ function createProvider(): LLMProvider | null {
       return new OpenAICompatibleProvider("llamacpp", baseUrl, model, apiKey, jsonMode);
     case "openai":
       return new OpenAICompatibleProvider("openai", baseUrl, model, apiKey, jsonMode);
+    case "openrouter":
+      return new OpenRouterProvider(baseUrl, model, apiKey, jsonMode);
     case "none":
       return null;
   }
@@ -166,6 +169,8 @@ export class LLMGateway {
         messages.push({ role: "assistant", content: text }, { role: "user", content: `Your JSON was invalid: ${issues}. Return the corrected JSON object only.` });
       } catch (err) {
         console.warn(`[llm] ${req.agent} failed (attempt ${attempt + 1}): ${(err as Error).message}`);
+        // Rate limited (free tiers): retrying right away only burns quota; use the fallback.
+        if (/^\S+ 429:/.test((err as Error).message)) break;
         if ((err as Error).name === "TimeoutError" || /fetch failed|ECONNREFUSED/.test(String(err))) {
           this.online = await this.provider.ping();
           break;

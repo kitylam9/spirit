@@ -84,7 +84,25 @@ LLM_BASE_URL=http://localhost:8080
 LLM_JSON_MODE=schema             # sent as response_format json_schema (grammar-constrained)
 ```
 
-The same `llamacpp` provider works for any OpenAI-compatible server: LM Studio
+### Cloud LLM: OpenRouter (free models)
+
+Create a key at https://openrouter.ai/keys, then in `.env`:
+
+```ini
+LLM_PROVIDER=openrouter
+OPENROUTER_API_KEY=sk-or-v1-...
+LLM_MODEL=                       # empty = google/gemma-4-31b-it:free; any id ending in :free works
+LLM_MAX_CONCURRENCY=2
+```
+
+Free models are rate limited (about 20 requests per minute and a small daily quota). When
+a limit is hit, that piece of content falls back to procedural generation and the game
+continues. At startup the server checks the key and, if the configured model no longer
+exists, prints the free models currently available.
+
+### Other OpenAI-compatible servers
+
+The `llamacpp` provider works for any OpenAI-compatible server: LM Studio
 (`LLM_BASE_URL=http://localhost:1234`), vLLM, KoboldCpp, or a hosted API
 (`LLM_PROVIDER=openai`, `LLM_API_KEY=...`). If a server rejects `json_schema`, use
 `LLM_JSON_MODE=object` or `off`; the schema is then included in the prompt.

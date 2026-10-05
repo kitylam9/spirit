@@ -2,7 +2,7 @@ import { config } from "../src/config.js";
 import { llm } from "../src/llm/gateway.js";
 
 await llm.init();
-console.log("config:", config.llm);
+console.log("config:", { ...config.llm, apiKey: config.llm.apiKey ? `${config.llm.apiKey.slice(0, 8)}…` : "(none)" });
 
 const started = Date.now();
 const result = await llm.json<{ name: string; omen: string }>({
