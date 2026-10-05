@@ -1,20 +1,30 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { AssetManifest, Civilization, ClientMessage, GameEvent, LlmStatus, NPC, Planet, PlayerState, Scene, ServerMessage, UILayout } from "@spirit/shared";
+import type { AssetManifest, BodyStats, Civilization, ClientMessage, FoundObject, GameEvent, LlmStatus, LooseObject, NPC, Planet, PlayerState, Scene, ServerMessage, SettingsInfo, UILayout } from "@spirit/shared";
 import { exitTarget, npcSpawns } from "@spirit/shared";
-import { config } from "./config.js";
+import { config, defaultModel, llmDefaults } from "./config.js";
 import { scoutAsset } from "./agents/assetScout.js";
 import { getManifest } from "./assets/catalog.js";
+import { drawObjects, objaverseAvailable, warmPool } from "./assets/objaverse.js";
+import { sketchfabEnabled } from "./assets/sketchfab.js";
+import { applySettings, settings } from "./settings.js";
 import { createCivilization } from "./agents/civilization.js";
 import { createEpitaph, createEvent, createGoal, type LifeGoal } from "./agents/narrative.js";
 import { npcReply, populateScene } from "./agents/npc.js";
+import { appraise, proceduralObjects } from "./agents/objectAppraiser.js";
 import { designScene, foodItemId } from "./agents/sceneDesigner.js";
 import { generateHud } from "./agents/uiGenerator.js";
 import { detailPlanet, nameSystem, type SystemNames } from "./agents/worldArchitect.js";
+import { KNOCK_OFF_DAMAGE, MAX_PARTS, bodyStats, type Body } from "./rules/body.js";
 import * as rules from "./rules/engine.js";
 import { Rng, newSeed } from "./util/rng.js";
+import { clamp, clip } from "./util/text.js";
 import { validate } from "./validate.js";
 import { TIERS } from "./world/templates.js";
+
+/** Fewer real objects than this (offline, no cache) are topped up with procedural shapes. */
+const MIN_LOOT = 6;
+type Vec3 = [number, number, number];
 import { generateSystem, systemSummary, toSummary, type ProceduralSystem } from "./world/universe.js";
 
 /** One universe = one life (docs/01-game-design.md §7). */
@@ -26,6 +36,10 @@ interface World {
   huds: Record<string, UILayout>;
   scenes: Record<string, Scene>;
   npcs: Record<string, NPC>;
+  /** Every found object that appeared in this universe, by id. */
+  objects: Record<string, FoundObject>;
+  /** Loose objects per scene id. */
+  loose: Record<string, LooseObject[]>;
 }
 
 interface Life {
@@ -73,6 +87,8 @@ export class Session {
         save.player.schemaVersion = "1.2";
         const s = new Session(save.player);
         s.world = save.world;
+        s.world.objects ??= {};
+        s.world.loose ??= {};
         s.life = save.life;
         if (s.player.location.phase === "reflection") {
           // Died before pressing continue: the save already holds the next universe seed.
@@ -82,7 +98,7 @@ export class Session {
           rules.startNewUniverse(s.player, s.world.system.id, s.player.universeSeed);
         }
         if (s.player.location.phase === "descent") s.player.location.phase = "space";
-        if (s.player.location.phase === "planet" && !s.player.incarnation) s.player.location = { phase: "space", systemId: s.world.system.id };
+        if (s.player.location.phase === "planet" && !s.player.incarnation && !s.player.location.sceneId) s.player.location = { phase: "space", systemId: s.world.system.id };
         return s;
       } catch (err) {
         console.warn(`[session] could not load ${file}: ${(err as Error).message}`);
@@ -98,7 +114,7 @@ export class Session {
   private static async buildWorld(universeSeed: string): Promise<World> {
     const system = generateSystem(universeSeed);
     const names = await nameSystem(system);
-    return { system, names, planets: {}, civs: {}, huds: {}, scenes: {}, npcs: {} };
+    return { system, names, planets: {}, civs: {}, huds: {}, scenes: {}, npcs: {}, objects: {}, loose: {} };
   }
 
   attach(send: (m: ServerMessage) => void): () => void {
@@ -123,6 +139,7 @@ export class Session {
   }
 
   private pushState(): void {
+    this.capHealth();
     this.send({ type: "state", player: this.player });
     this.scheduleSave();
   }
@@ -158,6 +175,7 @@ export class Session {
 
   welcome(llmStatus: LlmStatus): void {
     this.send({ type: "welcome", player: this.player, system: this.systemView(), llm: llmStatus });
+    this.sendSettings();
     const loc = this.player.location;
     if (loc.phase === "planet" && loc.planetId && loc.sceneId) {
       this.send({ type: "planet.detail", planet: this.world.planets[loc.planetId], civilization: this.world.civs[this.world.planets[loc.planetId].civilizationId] });
@@ -172,6 +190,156 @@ export class Session {
     const assets = [...new Set(scene.instances.map((i) => i.assetRef).filter((id): id is string => !!id))].map(getManifest).filter((m): m is AssetManifest => !!m);
     this.send({ type: "scene", scene, npcs, ui: this.world.huds[scene.planetId], assets });
     this.resolveAssets(scene);
+    this.ensureLoot(scene);
+  }
+
+  // ---------- found bodies (docs/09-found-bodies.md) ----------
+
+  private bodyStats(): BodyStats | null {
+    const body = this.player.incarnation?.body;
+    return body ? bodyStats(body, this.world.objects) : null;
+  }
+
+  private capHealth(): void {
+    const stats = this.bodyStats();
+    const inc = this.player.incarnation;
+    if (stats && inc && inc.stats.health > stats.maxHealth) inc.stats.health = stats.maxHealth;
+  }
+
+  private sendFound(): void {
+    const sceneId = this.player.location.sceneId;
+    if (this.player.location.phase !== "planet" || !sceneId) return;
+    const loose = this.world.loose[sceneId] ?? [];
+    const body = this.player.incarnation?.body;
+    const ids = new Set([...loose.map((l) => l.objectId), ...(body ? [body.core, ...body.parts].map((p) => p.objectId) : [])]);
+    const objects = [...ids].map((id) => this.world.objects[id]).filter(Boolean);
+    const assets = objects.map((o) => (o.assetRef ? getManifest(o.assetRef) : undefined)).filter((m): m is AssetManifest => !!m);
+    this.send({ type: "found", sceneId, loose, objects, assets, body: this.bodyStats() });
+  }
+
+  /** Random spot inside the scene, clear of the center and of placed instances. */
+  private lootSpot(scene: Scene): Vec3 {
+    const rx = Math.min(scene.bounds.sizeX / 2 - 3, 24);
+    const rz = Math.min(scene.bounds.sizeZ / 2 - 3, 24);
+    let spot: Vec3 = [0, 0, 4];
+    for (let i = 0; i < 20; i++) {
+      spot = [this.rng.range(-rx, rx), 0, this.rng.range(-rz, rz)];
+      if (Math.hypot(spot[0], spot[2]) < 3) continue;
+      if (!scene.instances.some((inst) => Math.hypot(inst.transform.position[0] - spot[0], inst.transform.position[2] - spot[2]) < 2.5)) break;
+    }
+    return spot;
+  }
+
+  /** Scatters objects over a scene the first time it is shown; the scene is playable meanwhile. */
+  private ensureLoot(scene: Scene): void {
+    const w = this.world;
+    if (w.loose[scene.id]) return this.sendFound();
+    this.once(`loot:${scene.id}`, async () => {
+      const planet = w.planets[scene.planetId];
+      const civ = w.civs[planet.civilizationId];
+      if (!this.player.incarnation) this.toast("Strange objects are falling from the sky…", "mystic");
+      const count = settings.gameplay.objectsPerScene;
+      const minLoot = Math.min(MIN_LOOT, count);
+      const manifests = await drawObjects(count);
+      const objects = manifests.length ? await appraise(manifests, planet, civ) : [];
+      if (objects.length < minLoot) objects.push(...proceduralObjects(minLoot - objects.length, planet.physical.palette, this.rng));
+      if (this.world !== w) return;
+      for (const o of objects) w.objects[o.id] = o;
+      w.loose[scene.id] = objects.map((o) => ({ objectId: o.id, position: this.lootSpot(scene), rotationY: this.rng.range(0, Math.PI * 2) }));
+      this.scheduleSave();
+      if (this.player.location.sceneId === scene.id) this.sendFound();
+    }).catch((err) => console.warn(`[found] ${scene.id}: ${(err as Error).message}`));
+  }
+
+  private async pickup(msg: Extract<ClientMessage, { type: "pickup" }>): Promise<void> {
+    const loc = this.player.location;
+    if (loc.phase !== "planet" || !loc.planetId || !loc.sceneId || this.busy) return;
+    const loose = this.world.loose[loc.sceneId] ?? [];
+    const idx = loose.findIndex((l) => l.objectId === msg.objectId);
+    const obj = this.world.objects[msg.objectId];
+    if (idx < 0 || !obj) return;
+    const inc = this.player.incarnation;
+    // The client already shows a placement preview; the `found` message resets it.
+    const reject = (text: string) => (this.toast(text, "bad"), this.sendFound());
+    if (inc && !inc.body) return reject("This old body cannot hold found objects.");
+    if (inc?.body && inc.body.parts.length >= MAX_PARTS) return reject(`A body holds at most ${MAX_PARTS} parts. Drop one first (X).`);
+    const finite = (v: unknown, lim: number): Vec3 =>
+      (Array.isArray(v) && v.length === 3 ? v : [0, 0, 0]).map((n) => clamp(Number.isFinite(n) ? Number(n) : 0, -lim, lim)) as Vec3;
+    const part: Body["core"] = {
+      partId: `part-${Date.now().toString(36)}-${this.rng.int(0, 1295).toString(36)}`,
+      objectId: obj.id,
+      position: inc ? finite(msg.position, 3) : [0, 0, 0],
+      rotation: finite(msg.rotation, Math.PI),
+      scale: clamp(Number(msg.scale) || 1, 0.5, 2),
+    };
+    loose.splice(idx, 1);
+    loc.position = finite(msg.at, 2000);
+    if (inc?.body) {
+      inc.body.parts.push(part);
+      this.toast(`Attached the ${obj.name}.`, "good");
+    } else await this.beginLife(part, obj);
+    // State first: the client builds the body from player state when `found` arrives.
+    this.pushState();
+    this.sendFound();
+  }
+
+  /** The wisp placed its core: the rules engine creates the life (docs/09-found-bodies.md §1). */
+  private async beginLife(core: Body["core"], obj: FoundObject): Promise<void> {
+    const loc = this.player.location;
+    const planet = this.world.planets[loc.planetId!];
+    const civ = this.world.civs[planet.civilizationId];
+    const person = this.rng.pick(civ.naming.personExamples.filter((n) => !Object.values(this.world.npcs).some((x) => x.name === n))) ?? "Nameless";
+    rules.assemble(this.player, { planetId: planet.id, tier: planet.tier, civ, name: clip(`${person.split(" ")[0]} the ${obj.name}`, 60), core, foodItemId: foodItemId(civ) });
+    this.player.incarnation!.stats.health = this.bodyStats()!.maxHealth;
+    this.life = newLife(this.player.time.tick);
+    this.busy = true;
+    try {
+      const goal = await createGoal(planet, civ, this.player);
+      this.life.goal = goal;
+      this.player.incarnation!.goals = [{ goalId: goal.goalId, title: goal.title, status: "active" }];
+    } finally {
+      this.busy = false;
+    }
+    this.toast(`You settle into the ${obj.name}. You are ${this.player.incarnation!.vessel.name}.`, "mystic");
+  }
+
+  private drop(msg: Extract<ClientMessage, { type: "drop" }>): void {
+    const inc = this.player.incarnation;
+    const sceneId = this.player.location.sceneId;
+    if (!inc?.body || !sceneId || this.busy) return;
+    const parts = inc.body.parts;
+    const idx = msg.partId ? parts.findIndex((p) => p.partId === msg.partId) : parts.length - 1;
+    if (idx < 0) return this.toast("Only the core is left; it holds you together.", "bad");
+    const at = (Array.isArray(msg.at) ? msg.at : this.player.location.position ?? [0, 0, 0]).map((n) => clamp(Number(n) || 0, -2000, 2000)) as Vec3;
+    this.player.location.position = at;
+    this.looseNear(parts.splice(idx, 1)[0].objectId, sceneId);
+    this.pushState();
+    this.sendFound();
+  }
+
+  private looseNear(objectId: string, sceneId: string): void {
+    const at = this.player.location.position ?? [0, 0, 0];
+    const a = this.rng.range(0, Math.PI * 2);
+    (this.world.loose[sceneId] ??= []).push({ objectId, position: [at[0] + Math.cos(a) * 1.5, 0, at[2] + Math.sin(a) * 1.5], rotationY: a });
+  }
+
+  /** A single hit of KNOCK_OFF_DAMAGE or more knocks a random non-core part off. */
+  private checkKnockOff(healthBefore: number): void {
+    const inc = this.player.incarnation;
+    const sceneId = this.player.location.sceneId;
+    if (!inc?.body?.parts.length || !sceneId || healthBefore - inc.stats.health < KNOCK_OFF_DAMAGE) return;
+    const part = inc.body.parts.splice(this.rng.int(0, inc.body.parts.length - 1), 1)[0];
+    this.looseNear(part.objectId, sceneId);
+    this.toast(`Your ${this.world.objects[part.objectId]?.name ?? "part"} is knocked off!`, "bad");
+    this.sendFound();
+  }
+
+  private vesselText(): string {
+    const inc = this.player.incarnation!;
+    if (!inc.body) return `${inc.vessel.role} named ${inc.vessel.name}`;
+    const name = (id: string) => this.world.objects[id]?.name ?? "something";
+    const parts = inc.body.parts.map((p) => name(p.objectId));
+    return `strange being named ${inc.vessel.name}, a spirit wearing a body of found objects: a ${name(inc.body.core.objectId)}${parts.length ? ` with ${parts.join(", ")} stuck on` : ""}`;
   }
 
   /** Asks the Asset Scout for every request without a usable model; the scene is already playable meanwhile. */
@@ -253,13 +421,20 @@ export class Session {
     try {
       switch (msg.type) {
         case "approach":
+          warmPool();
           await this.ensurePlanet(msg.planetId).then(({ planet, civ }) => this.send({ type: "planet.detail", planet, civilization: civ }));
           break;
         case "incarnate":
-          await this.incarnate(msg.planetId, msg.mode);
+          await this.descend(msg.planetId);
+          break;
+        case "pickup":
+          await this.pickup(msg);
+          break;
+        case "drop":
+          this.drop(msg);
           break;
         case "space.tick":
-          if (this.player.location.phase === "space" && rules.spaceDecay(this.player, 1, msg.boosting)) await this.spiritExtinguished();
+          if (this.player.location.phase === "space" && rules.spaceDecay(this.player, 1, msg.boosting ? 3 : 1)) await this.spiritExtinguished();
           else this.send({ type: "state", player: this.player });
           break;
         case "action":
@@ -277,6 +452,19 @@ export class Session {
         case "reflect.continue":
           await this.reflectContinue();
           break;
+        case "settings.get":
+          this.sendSettings();
+          break;
+        case "settings.set":
+          await applySettings(msg.settings);
+          if (Object.hasOwn(rules.DIFFICULTY, msg.difficulty)) this.player.difficulty = msg.difficulty;
+          this.sendSettings();
+          this.pushState();
+          this.toast("Settings saved.", "good");
+          break;
+        case "restart":
+          await this.restart();
+          break;
         case "hello":
           break;
       }
@@ -287,11 +475,11 @@ export class Session {
     }
   }
 
-  private async incarnate(planetId: string, mode: "born" | "arrive"): Promise<void> {
+  private async descend(planetId: string): Promise<void> {
     if (this.player.location.phase !== "space" || this.busy) return;
-    const cost = rules.INCARNATION_COST[mode];
-    if (this.player.spirit.energy <= cost) {
-      this.toast(`Not enough Spirit Energy to ${mode === "born" ? "be born" : "arrive"} (${cost} needed).`, "bad");
+    const cost = settings.gameplay.descentCost;
+    if (cost > 0 && this.player.spirit.energy <= cost) {
+      this.toast(`Not enough Spirit Energy to descend (${cost} needed).`, "bad");
       return;
     }
     this.busy = true;
@@ -301,31 +489,13 @@ export class Session {
       const { planet, civ } = await this.ensurePlanet(planetId);
       const region = planet.regions[0];
       const scene = await this.ensureScene(planet, civ, region.id);
-      const rng = this.rng;
-      const roles = civ.vessels[0]?.roles ?? TIERS[planet.tier].roles;
-      const name = rng.pick(civ.naming.personExamples.filter((n) => !Object.values(this.world.npcs).some((x) => x.name === n))) ?? "Nameless";
-      const spawn = scene.spawnPoints.find((s) => s.purpose === (mode === "born" ? "birth" : "arrival")) ?? scene.spawnPoints[0];
-      rules.incarnate(this.player, {
-        planetId: planet.id,
-        tier: planet.tier,
-        civ,
-        mode,
-        name,
-        role: rng.pick(roles),
-        regionId: region.id,
-        sceneId: scene.id,
-        position: spawn.position as [number, number, number],
-        foodItemId: foodItemId(civ),
-      });
+      const spawn = scene.spawnPoints.find((s) => s.purpose === "arrival") ?? scene.spawnPoints[0];
+      rules.descend(this.player, { planetId: planet.id, regionId: region.id, sceneId: scene.id, position: spawn.position as Vec3 });
       this.life = newLife(this.player.time.tick);
-      const goal = await createGoal(planet, civ, this.player);
-      this.life.goal = goal;
-      this.player.incarnation!.goals = [{ goalId: goal.goalId, title: goal.title, status: "active" }];
       this.send({ type: "planet.detail", planet, civilization: civ });
       this.sendScene(scene.id);
       this.pushState();
-      const inc = this.player.incarnation!;
-      this.toast(`You ${mode === "born" ? "are born as" : "wake as"} ${inc.vessel.name}, a ${inc.vessel.role}.`, "mystic");
+      this.toast("You drift down as a wisp of light. Find something to wear (E).", "mystic");
       this.ensureTimer();
     } catch (err) {
       this.player.location.phase = "space";
@@ -336,9 +506,10 @@ export class Session {
     }
   }
 
-  private currentContext() {
+  /** Null unless on a planet; also null for a wisp unless `wispOk`. */
+  private currentContext(wispOk = false) {
     const loc = this.player.location;
-    if (loc.phase !== "planet" || !loc.planetId || !loc.sceneId || !this.player.incarnation) return null;
+    if (loc.phase !== "planet" || !loc.planetId || !loc.sceneId || (!this.player.incarnation && !wispOk)) return null;
     const planet = this.world.planets[loc.planetId];
     const civ = this.world.civs[planet.civilizationId];
     const scene = this.world.scenes[loc.sceneId];
@@ -353,9 +524,11 @@ export class Session {
 
   /** Time skip with a single hazard roll; returns false if the player died. */
   private async skip(ticks: number): Promise<boolean> {
-    const ctx = this.currentContext()!;
+    const ctx = this.currentContext(true)!;
+    const before = this.player.incarnation?.stats.health ?? 0;
     const out = rules.advance(this.player, ctx.civ, ctx.region.danger, ticks, this.rng, false);
     for (const m of out.messages) this.toast(m.text, m.tone);
+    this.checkKnockOff(before);
     if (out.deathCause) {
       await this.die(out.deathCause);
       return false;
@@ -364,7 +537,7 @@ export class Session {
   }
 
   private async action(verb: string, params: Record<string, string | number | boolean>): Promise<void> {
-    const ctx = this.currentContext();
+    const ctx = this.currentContext(verb === "travel");
     if (!ctx || this.busy) return;
     const { planet, civ, scene } = ctx;
     const inc = this.player.incarnation!;
@@ -408,7 +581,7 @@ export class Session {
       }
       case "work": {
         const employer = params.npcId ? String(params.npcId) : undefined;
-        const pay = Math.round((employer && this.life.jobs[employer] ? this.life.jobs[employer] : wage * 0.5) * 100) / 100;
+        const pay = Math.round((employer && this.life.jobs[employer] ? this.life.jobs[employer] : wage * 0.5) * (this.bodyStats()?.payMultiplier ?? 1) * 100) / 100;
         if (inc.stats.energy < 15) return this.toast("You are too exhausted to work.", "bad");
         this.toast(`You work for four hours at the ${t.workplace}…`, "info");
         if (!(await this.skip(240))) return;
@@ -439,7 +612,7 @@ export class Session {
         if (!conn) return;
         this.busy = true;
         try {
-          if (!(await this.skip(conn.travelTicks))) return;
+          if (this.player.incarnation && !(await this.skip(conn.travelTicks))) return;
           const next = await this.ensureScene(planet, civ, regionId);
           const back = next.exits.find((e) => exitTarget(e).regionId === ctx.region.id);
           const pos = back ? ([back.position[0] * 0.8, 0, back.position[2] * 0.8] as [number, number, number]) : ([0, 0, 6] as [number, number, number]);
@@ -461,9 +634,14 @@ export class Session {
   private dialogueStart(npcId: string): void {
     const npc = this.world.npcs[npcId];
     if (!npc) return;
+    if (!this.player.incarnation) return this.toast(`${npc.name} squints at a strange floating light and looks away.`, "mystic");
     const hostile = this.life.hostile.includes(npcId);
     const say = hostile ? "Get away from me." : npc.greeting || "Yes?";
-    this.send({ type: "npc.say", reply: { npcId, say, emotion: hostile ? "angry" : "neutral", intents: [], opinion: rules.opinionOf(this.player, npcId) } });
+    this.send({ type: "npc.say", reply: { npcId, say, emotion: hostile ? "angry" : "neutral", intents: [], opinion: this.opinionOf(npcId) } });
+  }
+
+  private opinionOf(npcId: string): number {
+    return rules.opinionOf(this.player, npcId, this.bodyStats()?.firstOpinion ?? 0);
   }
 
   private async dialogueSay(npcId: string, text: string): Promise<void> {
@@ -477,9 +655,9 @@ export class Session {
       planet: ctx.planet,
       civ: ctx.civ,
       scene: ctx.scene,
-      opinion: rules.opinionOf(this.player, npcId),
+      opinion: this.opinionOf(npcId),
       history,
-      playerVessel: `${inc.vessel.role} named ${inc.vessel.name}`,
+      playerVessel: this.vesselText(),
       playerText: text,
     });
     history.push({ speaker: "player", text: text.slice(0, 400) }, { speaker: "npc", text: reply.say });
@@ -514,6 +692,7 @@ export class Session {
     if (!ev || ev.id !== eventId || !this.player.incarnation) return;
     const choice = ev.choices?.find((c) => c.id === choiceId);
     if (!choice) return;
+    const before = this.player.incarnation.stats.health;
     const lines = rules.applyEffects(this.player, choice.effects ?? []);
     if (choice.hint === "Risky" || choice.hint === "Generous") this.player.incarnation.fulfillment = Math.min(100, (this.player.incarnation.fulfillment ?? 0) + 4);
     this.deed(`faced "${ev.title}" and chose to ${choice.label.charAt(0).toLowerCase()}${choice.label.slice(1)}`);
@@ -523,6 +702,7 @@ export class Session {
       void this.die(`Fell during "${ev.title}"`);
       return;
     }
+    this.checkKnockOff(before);
     this.checkGoal();
     this.pushState();
   }
@@ -550,12 +730,22 @@ export class Session {
   }
 
   private async tick(): Promise<void> {
+    if (this.busy) return;
+    if (this.player.location.phase === "planet" && !this.player.incarnation) {
+      // A wisp drains SE at twice the space rate (docs/09-found-bodies.md §1).
+      if (rules.spaceDecay(this.player, 1, 2)) return this.spiritExtinguished();
+      this.send({ type: "state", player: this.player });
+      return this.scheduleSave();
+    }
     const ctx = this.currentContext();
-    if (!ctx || this.busy) return;
+    if (!ctx) return;
+    const before = this.player.incarnation!.stats.health;
     const out = rules.advance(this.player, ctx.civ, ctx.region.danger, 1, this.rng);
     for (const m of out.messages) this.toast(m.text, m.tone);
     if (out.deathCause) return this.die(out.deathCause);
+    this.checkKnockOff(before);
     this.checkGoal();
+    this.capHealth();
     this.send({ type: "state", player: this.player });
     this.scheduleSave();
 
@@ -643,5 +833,37 @@ export class Session {
     this.send({ type: "loading", what: "", done: true });
     this.send({ type: "system", system: this.systemView() });
     this.pushState();
+  }
+
+  /** From the settings menu: leave the current life (no death, no SE change) for a new universe. */
+  private async restart(): Promise<void> {
+    if (this.busy || this.dying) return;
+    this.busy = true;
+    try {
+      this.send({ type: "loading", what: "A new universe unfolds…", done: false });
+      const seed = newSeed();
+      this.world = await Session.buildWorld(seed);
+      this.nextWorld = null;
+      this.life = newLife(this.player.time.tick);
+      rules.startNewUniverse(this.player, this.world.system.id, seed);
+      this.send({ type: "loading", what: "", done: true });
+      this.send({ type: "system", system: this.systemView() });
+      this.pushState();
+      this.saveNow();
+      this.toast("You let go and drift into a new universe.", "mystic");
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  private sendSettings(): void {
+    this.send({
+      type: "settings",
+      info: {
+        settings,
+        defaultModels: Object.fromEntries(Object.keys(llmDefaults).map((k) => [k, defaultModel(k as keyof typeof llmDefaults)])) as SettingsInfo["defaultModels"],
+        available: { sketchfab: sketchfabEnabled(), ...objaverseAvailable() },
+      },
+    });
   }
 }

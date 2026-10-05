@@ -6,6 +6,7 @@ import type { Event } from "./generated/event.js";
 import type { PlayerState } from "./generated/player-state.js";
 import type { UILayout } from "./generated/ui-layout.js";
 import type { AssetManifest } from "./generated/asset-manifest.js";
+import type { FoundObject } from "./generated/found-object.js";
 
 export type Tier = Planet["tier"];
 /** Alias that avoids clashing with the DOM `Event` type in client code. */
@@ -96,16 +97,76 @@ export interface LlmStatus {
   failures: number;
 }
 
+/** A found object lying in a scene (session state, docs/09-found-bodies.md §6). */
+export interface LooseObject {
+  objectId: string;
+  position: [number, number, number];
+  rotationY: number;
+}
+
+/** Effects of the current body's traits, computed by the rules engine (docs/09-found-bodies.md §3). */
+export interface BodyStats {
+  maxHealth: number;
+  /** Meters per second. */
+  speed: number;
+  payMultiplier: number;
+  firstOpinion: number;
+}
+
+/** Server settings changeable from the in-game menu; they last until the server restarts (.env is the default). */
+export interface ServerSettings {
+  llm: {
+    provider: "ollama" | "llamacpp" | "openai" | "openrouter" | "none";
+    /** Empty = the provider's default model. */
+    model: string;
+    /** Empty = the provider's default mode. */
+    jsonMode: "" | "schema" | "object" | "off";
+    maxConcurrency: number;
+    timeoutMs: number;
+  };
+  gameplay: {
+    /** Spirit Energy spent to descend to a planet. */
+    descentCost: number;
+    /** Multiplier on Spirit Energy drain in space and as a wisp. */
+    seDrain: number;
+    objectsPerScene: number;
+  };
+  assets: {
+    polyhaven: boolean;
+    sketchfab: boolean;
+    objaverse: { sketchfab: boolean; smithsonian: boolean; github: boolean; thingiverse: boolean };
+  };
+}
+
+export interface SettingsInfo {
+  settings: ServerSettings;
+  /** Default model per provider, shown as a placeholder. */
+  defaultModels: Record<ServerSettings["llm"]["provider"], string>;
+  /** Sources that can work at all (token set, index built). */
+  available: { sketchfab: boolean; github: boolean; thingiverse: boolean };
+}
+
+type Vec3 = [number, number, number];
+
 export type ClientMessage =
   | { type: "hello"; playerId?: string }
   | { type: "approach"; planetId: string }
-  | { type: "incarnate"; planetId: string; mode: "born" | "arrive" }
+  /** Descend to the planet as a wisp. */
+  | { type: "incarnate"; planetId: string }
+  /** Attach a loose object; `position`/`rotation` are relative to the core, `at` is the player's world position. */
+  | { type: "pickup"; objectId: string; position: Vec3; rotation: Vec3; scale: number; at: Vec3 }
+  /** Drop a part (the newest one when `partId` is omitted) at the player's position. */
+  | { type: "drop"; partId?: string; at: Vec3 }
   | { type: "action"; action: Action }
   | { type: "dialogue.start"; npcId: string }
   | { type: "dialogue.say"; npcId: string; text: string }
   | { type: "event.choose"; eventId: string; choiceId: string }
   | { type: "space.tick"; boosting: boolean }
-  | { type: "reflect.continue" };
+  | { type: "reflect.continue" }
+  | { type: "settings.get" }
+  | { type: "settings.set"; settings: ServerSettings; difficulty: PlayerState["difficulty"] }
+  /** End the current life without a death and start in a new universe; Spirit Energy and lives lived are kept. */
+  | { type: "restart" };
 
 export type ServerMessage =
   | { type: "welcome"; player: PlayerState; system: StarSystemSummary; llm: LlmStatus }
@@ -116,10 +177,13 @@ export type ServerMessage =
   | { type: "scene"; scene: Scene; npcs: NPC[]; ui: UILayout; assets: AssetManifest[] }
   /** A model for `instanceIds` finished ingesting; the client swaps out their placeholders. */
   | { type: "asset"; sceneId: string; manifest: AssetManifest; instanceIds: string[] }
+  /** Loose objects of the current scene plus every object the body is made of; `body` is null for a wisp. */
+  | { type: "found"; sceneId: string; loose: LooseObject[]; objects: FoundObject[]; assets: AssetManifest[]; body: BodyStats | null }
   | { type: "npc.say"; reply: DialogueReply }
   | { type: "event"; event: Event }
   | { type: "toast"; text: string; tone: "info" | "good" | "bad" | "mystic" }
   | { type: "loading"; what: string; done: boolean }
   | { type: "death"; report: DeathReport }
   | { type: "llm"; status: LlmStatus }
+  | { type: "settings"; info: SettingsInfo }
   | { type: "error"; message: string };

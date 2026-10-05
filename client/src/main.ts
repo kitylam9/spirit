@@ -7,9 +7,10 @@ import { Net } from "./net.js";
 import { state } from "./state.js";
 import { renderLayout, type Rendered, type UiAction } from "./ui/dsl.js";
 import * as layouts from "./ui/layouts.js";
+import { SettingsMenu } from "./ui/settings.js";
 import type { View } from "./views/common.js";
 import { SpaceView } from "./views/SpaceView.js";
-import { SurfaceView, type Target } from "./views/SurfaceView.js";
+import { SurfaceView, type PlayerMode, type Target } from "./views/SurfaceView.js";
 
 // ---------- renderer ----------
 const viewport = document.getElementById("viewport")!;
@@ -57,9 +58,12 @@ const prompt = div("prompt");
 const llmStatus = div("llm-status");
 const offline = div("offline");
 const credits = div("credits");
+const bodyInfo = div("body-info");
 offline.textContent = "Connecting to the Spirit server…";
-loading.hidden = prompt.hidden = credits.hidden = true;
-ui.append(toasts, loading, prompt, llmStatus, credits, offline);
+loading.hidden = prompt.hidden = credits.hidden = bodyInfo.hidden = true;
+ui.append(toasts, loading, prompt, llmStatus, credits, bodyInfo);
+const settingsMenu = new SettingsMenu(ui, { send: (m) => net.send(m), info: () => state.settings, difficulty: () => state.player?.difficulty });
+ui.append(offline);
 
 function toast(text: string, tone = "info"): void {
   const el = div(`toast ${tone}`);
@@ -121,10 +125,46 @@ function syncView(): void {
     if (key !== viewKey) {
       omenLayer.set(null);
       const scene = state.scene;
-      setView(key, () => new SurfaceView(renderer, scene, state.npcs, state.assets, p.location.position as [number, number, number] | undefined, { onPrompt, onInteract }));
-      hudLayer.set(planetHud);
+      setView(key, () => new SurfaceView(renderer, scene, state.npcs, state.assets, p.location.position as [number, number, number] | undefined, { onPrompt, onInteract, send: (m) => net.send(m) }));
+      hudMode = "";
     }
+    // A wisp has no stats yet; the planet HUD appears once the life begins.
+    const mode = playerMode();
+    if (mode !== hudMode) {
+      hudMode = mode;
+      hudLayer.set(mode === "wisp" ? null : planetHud);
+    }
+    syncFound();
   }
+  renderBodyInfo();
+}
+
+let hudMode = "";
+
+function playerMode(): PlayerMode {
+  const inc = state.player?.incarnation;
+  return !inc ? "wisp" : inc.body ? "body" : "legacy";
+}
+
+function syncFound(): void {
+  const f = state.found;
+  if (!f || !(view instanceof SurfaceView) || viewKey !== `surface:${f.sceneId}`) return;
+  view.setFound(f, playerMode(), state.player?.incarnation?.body, state.planet?.physical.palette ?? []);
+}
+
+function renderBodyInfo(): void {
+  const p = state.player;
+  const onSurface = p?.location.phase === "planet";
+  bodyInfo.hidden = !onSurface;
+  if (!onSurface) return;
+  const mode = playerMode();
+  if (mode === "wisp") {
+    bodyInfo.textContent = `You are a wisp · Spirit Energy ${Math.round(p!.spirit.energy)}, draining · press E at an object to inhabit it · Space/C up/down`;
+  } else if (mode === "body") {
+    const b = state.found?.body;
+    const parts = p!.incarnation!.body!.parts.length;
+    bodyInfo.textContent = `Core + ${parts}/8 parts${b ? ` · speed ${b.speed} · max HP ${b.maxHealth} · pay ×${b.payMultiplier}` : ""} · X drops newest`;
+  } else bodyInfo.hidden = true;
 }
 
 function onNear(p: PlanetSummary | null): void {
@@ -134,7 +174,7 @@ function onNear(p: PlanetSummary | null): void {
     approached.add(p.id);
     net.send({ type: "approach", planetId: p.id });
   }
-  omenLayer.set(layouts.omen(p, state.player.spirit.energy, p.detailReady));
+  omenLayer.set(layouts.omen(p, state.player.spirit.energy, p.detailReady, state.settings?.settings.gameplay.descentCost ?? 5));
 }
 
 function onAutopilot(id: string | null): void {
@@ -152,7 +192,7 @@ function vendorId(): string | undefined {
 }
 
 function onInteract(t: Target): void {
-  if (dialogue) return;
+  if (dialogue || t.kind === "loose") return;
   if (t.kind === "npc") return openDialogue(t.npc);
   if (t.kind === "exit") {
     const regionId = exitTarget(t.exit).regionId;
@@ -192,7 +232,7 @@ function dispatch(a: UiAction, input?: string): void {
   switch (a.verb) {
     case "incarnate.request":
       omenLayer.set(null);
-      net.send({ type: "incarnate", planetId: String(params.planetId), mode: params.mode === "born" ? "born" : "arrive" });
+      net.send({ type: "incarnate", planetId: String(params.planetId) });
       return;
     case "reflect.continue":
       reflectionLayer.set(null);
@@ -242,8 +282,11 @@ function onMessage(m: ServerMessage): void {
     }
     case "system":
       state.system = m.system;
-      state.planet = state.civ = state.scene = null;
+      state.planet = state.civ = state.scene = state.found = null;
       state.npcs = [];
+      closeDialogue();
+      eventLayer.set(null);
+      prompt.hidden = true;
       syncView();
       break;
     case "planet.summary":
@@ -269,6 +312,12 @@ function onMessage(m: ServerMessage): void {
       if (!state.assets.some((a) => a.id === m.manifest.id)) state.assets.push(m.manifest);
       if (view instanceof SurfaceView && viewKey === `surface:${m.sceneId}`) view.applyAsset(m.manifest, m.instanceIds);
       renderCredits();
+      break;
+    case "found":
+      state.found = m;
+      syncFound();
+      renderCredits();
+      renderBodyInfo();
       break;
     case "npc.say":
       if (dialogue && dialogue.npc.id === m.reply.npcId) {
@@ -300,6 +349,11 @@ function onMessage(m: ServerMessage): void {
       state.llm = m.status;
       renderLlm();
       break;
+    case "settings":
+      state.settings = m.info;
+      settingsMenu.refresh();
+      if (nearPlanet) onNear(nearPlanet);
+      break;
     case "error":
       toast(m.message, "bad");
       break;
@@ -310,8 +364,10 @@ function onMessage(m: ServerMessage): void {
 /** CC-BY requires visible attribution; CC0 credits are shown too. */
 function renderCredits(): void {
   const onSurface = state.player?.location.phase === "planet" && !!state.scene;
-  credits.hidden = !onSurface || !state.assets.length;
-  credits.textContent = credits.title = `3D models: ${state.assets.map((a) => a.license.attribution).join(" · ")}`;
+  const found = state.found && state.found.sceneId === state.scene?.id ? state.found.assets : [];
+  const all = [...new Map([...state.assets, ...found].map((a) => [a.id, a])).values()];
+  credits.hidden = !onSurface || !all.length;
+  credits.textContent = credits.title = `3D models: ${all.map((a) => a.license.attribution).join(" · ")}`;
 }
 
 function renderLlm(): void {
@@ -327,10 +383,10 @@ net.connect();
 // ---------- global keys and timers ----------
 addEventListener("keydown", (e) => {
   if (e.code === "Escape" && dialogue) return closeDialogue();
-  if (document.activeElement instanceof HTMLInputElement) return;
+  if (e.code === "Escape" && (settingsMenu.open || !(view instanceof SurfaceView && view.isPlacing))) return settingsMenu.toggle();
+  if (settingsMenu.open || document.activeElement instanceof HTMLInputElement) return;
   if (e.code === "Enter" && reflectionLayer.open) return dispatch({ verb: "reflect.continue" });
-  if (nearPlanet && state.player?.location.phase === "space" && (e.code === "Digit1" || e.code === "Digit2"))
-    dispatch({ verb: "incarnate.request", params: { planetId: nearPlanet.id, mode: e.code === "Digit1" ? "born" : "arrive" } });
+  if (nearPlanet && state.player?.location.phase === "space" && e.code === "Digit1") dispatch({ verb: "incarnate.request", params: { planetId: nearPlanet.id } });
 });
 
 setInterval(() => {

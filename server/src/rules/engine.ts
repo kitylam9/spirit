@@ -1,7 +1,9 @@
 import type { Civilization, GameEvent, PlayerState, Tier } from "@spirit/shared";
 import { Rng, newSeed } from "../util/rng.js";
 import { clamp } from "../util/text.js";
+import { settings } from "../settings.js";
 import { BALANCE, TIERS, type Balance } from "../world/templates.js";
+import type { Body } from "./body.js";
 
 /**
  * Deterministic rules engine (docs/01-game-design.md §4). LLMs never decide numbers;
@@ -17,7 +19,6 @@ export const DIFFICULTY: Record<Difficulty, { seDecay: number; deathCost: number
   ascetic: { seDecay: 1.5, deathCost: 1.5 },
 };
 
-export const INCARNATION_COST = { born: 5, arrive: 10 } as const;
 const SE_DECAY_PER_SECOND = 0.5 / 60;
 const BAR_STATS = ["health", "hunger", "energy", "exposure", "reputation", "resolve", "insight"] as const;
 
@@ -59,35 +60,40 @@ export function clampStats(s: Stats): void {
   s.wealth = Math.max(0, Math.round(s.wealth * 100) / 100);
 }
 
-export function incarnate(
+/** The spirit lands on a surface without a body (a wisp). */
+export function descend(p: PlayerState, args: { planetId: string; regionId: string; sceneId: string; position: [number, number, number] }): void {
+  p.spirit.energy = clamp(p.spirit.energy - settings.gameplay.descentCost, 0, 100);
+  p.location = { phase: "planet", systemId: p.location.systemId, ...args };
+  p.incarnation = null;
+}
+
+/** The wisp places its first found object: the life begins (docs/09-found-bodies.md §1). */
+export function assemble(
   p: PlayerState,
-  args: { planetId: string; tier: Tier; civ: Civilization; mode: "born" | "arrive"; name: string; role: string; regionId: string; sceneId: string; position: [number, number, number]; foodItemId: string },
+  args: { planetId: string; tier: Tier; civ: Civilization; name: string; core: Body["core"]; foodItemId: string },
 ): void {
-  const rng = new Rng(newSeed());
   const t = TIERS[args.tier];
   const wage = balanceOf(args.civ).dailyWageBase;
-  const vessel = args.civ.vessels[0];
-  p.spirit.energy = clamp(p.spirit.energy - INCARNATION_COST[args.mode], 0, 100);
-  p.location = { phase: "planet", systemId: p.location.systemId, planetId: args.planetId, regionId: args.regionId, sceneId: args.sceneId, position: args.position };
   p.incarnation = {
     id: `life-${args.planetId.replace(/^planet-/, "")}-${p.spirit.livesLived + 1}`,
-    mode: args.mode,
+    mode: "assembled",
     planetId: args.planetId,
     vessel: {
-      kind: vessel?.kind ?? "humanoid",
-      species: vessel?.species ?? "human",
-      role: args.role,
+      kind: "assembled",
+      species: "found-object being",
+      role: "wanderer",
       name: args.name,
-      age: args.mode === "born" ? 16 : rng.int(22, 40),
-      lifespan: vessel?.lifespanYears ?? t.lifespan,
+      age: 0,
+      lifespan: args.civ.vessels[0]?.lifespanYears ?? t.lifespan,
     },
+    body: { core: args.core, parts: [] },
     stats: {
       health: 100,
-      hunger: args.mode === "born" ? 80 : 60,
+      hunger: 70,
       energy: 85,
       exposure: 0,
-      reputation: args.mode === "born" ? 40 : 25,
-      wealth: Math.round(wage * (args.mode === "born" ? 0.8 : 1.5)),
+      reputation: 25,
+      wealth: Math.round(wage),
       resolve: 70,
       insight: 10,
     },
@@ -157,8 +163,9 @@ export function advance(p: PlayerState, civ: Civilization, danger: number, ticks
   return out;
 }
 
-export function spaceDecay(p: PlayerState, seconds: number, boosting: boolean): boolean {
-  p.spirit.energy = clamp(p.spirit.energy - SE_DECAY_PER_SECOND * seconds * (boosting ? 3 : 1) * DIFFICULTY[p.difficulty].seDecay, 0, 100);
+/** SE drain without a body: `rate` 1 in space (3 while boosting), 2 as a wisp on a surface. */
+export function spaceDecay(p: PlayerState, seconds: number, rate: number): boolean {
+  p.spirit.energy = clamp(p.spirit.energy - SE_DECAY_PER_SECOND * seconds * rate * settings.gameplay.seDrain * DIFFICULTY[p.difficulty].seDecay, 0, 100);
   p.time.realSecondsPlayed = (p.time.realSecondsPlayed ?? 0) + seconds;
   return p.spirit.energy <= 0;
 }
@@ -203,8 +210,9 @@ export function setOpinion(p: PlayerState, npcId: string, opinion: number): void
   else rels.push({ npcId, opinion: clamp(Math.round(opinion), -100, 100) });
 }
 
-export function opinionOf(p: PlayerState, npcId: string): number {
-  return p.incarnation?.relationships.find((r) => r.npcId === npcId)?.opinion ?? 0;
+/** `firstOpinion` applies to NPCs met for the first time (a found body's charm). */
+export function opinionOf(p: PlayerState, npcId: string, firstOpinion = 0): number {
+  return p.incarnation?.relationships.find((r) => r.npcId === npcId)?.opinion ?? firstOpinion;
 }
 
 /** SE accounting at the end of a life (docs/01-game-design.md §4). */

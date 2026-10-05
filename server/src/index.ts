@@ -28,6 +28,8 @@ const MIME: Record<string, string> = {
   ".png": "image/png",
   ".webp": "image/webp",
   ".ktx2": "image/ktx2",
+  ".stl": "model/stl",
+  ".obj": "model/obj",
 };
 
 const http = createServer((req, res) => {

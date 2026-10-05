@@ -1,9 +1,14 @@
 import * as THREE from "three";
 import { Sky } from "three/examples/jsm/objects/Sky.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import type { AssetManifest, NPC, Scene } from "@spirit/shared";
+import type { AssetManifest, ClientMessage, FoundObject, LooseObject, NPC, Scene, ServerMessage } from "@spirit/shared";
 import { exitTarget, npcSpawns } from "@spirit/shared";
-import { Input, disposeScene, fbm, makeLabel, rngFrom, valueNoise, type View } from "./common.js";
+import { Input, controls, disposeScene, fbm, glowTexture, makeLabel, rngFrom, valueNoise, type View } from "./common.js";
+import { BodyAssembly, loadFound, objectSize, placePart, type Body } from "./FoundBody.js";
+
+export type Found = Extract<ServerMessage, { type: "found" }>;
+/** wisp: no body yet; body: found-object body; legacy: capsule of a life from before found bodies. */
+export type PlayerMode = "wisp" | "body" | "legacy";
 
 type Instance = Scene["instances"][number];
 type Interactable = NonNullable<Scene["interactables"]>[number];
@@ -12,7 +17,20 @@ type Exit = Scene["exits"][number];
 export type Target =
   | { kind: "npc"; npc: NPC; label: string }
   | { kind: "interactable"; it: Interactable; label: string }
-  | { kind: "exit"; exit: Exit; label: string };
+  | { kind: "exit"; exit: Exit; label: string }
+  | { kind: "loose"; entry: LooseObject; obj: FoundObject; label: string };
+
+interface Placing {
+  entry: LooseObject;
+  obj: FoundObject;
+  core: boolean;
+  mesh: THREE.Object3D | null;
+  scale: number;
+  rotY: number;
+  /** Attachment point on the body surface and the outward direction, in the core frame. */
+  anchor: THREE.Vector3;
+  dir: THREE.Vector3;
+}
 
 const MATERIAL_COLORS: [string, string][] = [
   ["grass", "#5d8a3a"], ["sand", "#d8c08a"], ["snow", "#eef3f8"], ["ice", "#cfe6f5"], ["mud", "#5a4a32"], ["basalt", "#3a3634"],
@@ -54,6 +72,7 @@ interface Collider { x: number; z: number; r: number }
 interface NpcBody { npc: NPC; group: THREE.Group; home: THREE.Vector3; target: THREE.Vector3; wait: number; wanders: boolean }
 
 const PLAYER_SPEED = 4.5;
+const WISP_SPEED = 5;
 const RUN = 1.8;
 const HALF = 48;
 
@@ -76,6 +95,28 @@ export class SurfaceView implements View {
   private placed = new Map<string, THREE.Group[]>();
   private disposed = false;
   talkingTo: string | null = null;
+  // Found bodies (docs/09-found-bodies.md).
+  private mode: PlayerMode = "legacy";
+  private avatar = new THREE.Group();
+  private wisp = new THREE.Group();
+  private hover = 1.2;
+  private assembly = new BodyAssembly();
+  private bodySpeed = PLAYER_SPEED;
+  private objects = new Map<string, FoundObject>();
+  private foundAssets = new Map<string, AssetManifest>();
+  private loose = new Map<string, { entry: LooseObject; group: THREE.Group; ring: THREE.Mesh }>();
+  private palette: string[] = [];
+  private placing: Placing | null = null;
+  private raycaster = new THREE.Raycaster();
+  get isPlacing(): boolean {
+    return !!this.placing;
+  }
+  private onWheel = (e: WheelEvent) => {
+    if (!this.placing) return;
+    e.preventDefault();
+    this.placing.scale = THREE.MathUtils.clamp(this.placing.scale * (e.deltaY < 0 ? 1.1 : 1 / 1.1), 0.5, 2);
+    this.layoutPlacement();
+  };
 
   constructor(
     private renderer: THREE.WebGLRenderer,
@@ -83,12 +124,11 @@ export class SurfaceView implements View {
     npcs: NPC[],
     assets: AssetManifest[],
     start: [number, number, number] | undefined,
-    private events: { onPrompt(text: string | null): void; onInteract(t: Target): void },
+    private events: { onPrompt(text: string | null): void; onInteract(t: Target): void; send(m: ClientMessage): void },
   ) {
     renderer.toneMappingExposure = 0.6;
-    this.input = new Input(renderer.domElement, (code) => {
-      if (code === "KeyE" && this.target) this.events.onInteract(this.target);
-    });
+    this.input = new Input(renderer.domElement, (code) => this.onKey(code));
+    renderer.domElement.addEventListener("wheel", this.onWheel, { passive: false });
     const env = data.environment;
     const tier = Number(data.tier.slice(1));
     const night = env.lighting.sun.elevation < 0;
@@ -201,8 +241,11 @@ export class SurfaceView implements View {
       this.npcs.push({ npc, group, home, target: home.clone(), wait: Math.random() * 4, wanders: sp.behavior === "wander" || sp.behavior === "work" });
     }
 
-    // The player: a person with a faint spirit light inside.
-    this.player = this.person("player", true);
+    // The player: a wisp, a found body, or (lives from older saves) a person with a spirit light inside.
+    this.avatar = this.person("player", true);
+    this.wisp = this.makeWisp();
+    this.player.add(this.avatar, this.wisp, this.assembly.root);
+    this.setMode("legacy");
     const p0 = start ?? (data.spawnPoints[0].position as [number, number, number]);
     this.player.position.set(p0[0], this.height(p0[0], p0[2]), p0[2]);
     this.scene.add(this.player);
@@ -230,6 +273,173 @@ export class SurfaceView implements View {
       g.add(core, light);
     }
     return g;
+  }
+
+  // ---------- found bodies ----------
+
+  private makeWisp(): THREE.Group {
+    const g = new THREE.Group();
+    const core = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 12), new THREE.MeshBasicMaterial({ color: "#ffffff" }));
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: "#b8a4ff", transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    halo.scale.setScalar(1.3);
+    g.add(core, halo, new THREE.PointLight("#b8a4ff", 3, 6, 2));
+    return g;
+  }
+
+  private setMode(mode: PlayerMode): void {
+    this.mode = mode;
+    this.avatar.visible = mode === "legacy";
+    this.wisp.visible = mode === "wisp";
+    this.assembly.root.visible = mode !== "legacy";
+  }
+
+  /** Applies the latest `found` message plus the body from player state. */
+  setFound(found: Found, mode: PlayerMode, body: Body | undefined, palette: string[]): void {
+    this.palette = palette;
+    for (const o of found.objects) this.objects.set(o.id, o);
+    for (const a of found.assets) this.foundAssets.set(a.id, a);
+    if (found.body) this.bodySpeed = found.body.speed;
+    if (mode !== this.mode) {
+      this.setMode(mode);
+      if (mode === "wisp" && !this.placing) this.assembly.frame.clear();
+    }
+
+    const ids = new Set(found.loose.map((l) => l.objectId));
+    for (const [id, l] of this.loose) {
+      if (ids.has(id) && l.entry.position.join() === found.loose.find((x) => x.objectId === id)!.position.join()) continue;
+      l.group.removeFromParent();
+      this.loose.delete(id);
+    }
+    for (const entry of found.loose) if (!this.loose.has(entry.objectId)) this.addLoose(entry);
+    if (!this.placing && mode === "body" && body) void this.assembly.set(body, this.objects, this.foundAssets, palette);
+  }
+
+  private addLoose(entry: LooseObject): void {
+    const obj = this.objects.get(entry.objectId);
+    const [x, , z] = entry.position;
+    const group = new THREE.Group();
+    group.position.set(x, this.height(x, z), z);
+    group.rotation.y = entry.rotationY;
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.55, 0.72, 32),
+      new THREE.MeshBasicMaterial({ color: "#ffe9a8", transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }),
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.04;
+    group.add(ring);
+    this.scene.add(group);
+    this.loose.set(entry.objectId, { entry, group, ring });
+    if (!obj) return;
+    loadFound(obj, this.foundAssets, this.palette)
+      .then((mesh) => {
+        if (this.disposed || this.loose.get(entry.objectId)?.group !== group) return;
+        mesh.scale.setScalar(objectSize(obj, "loose"));
+        group.add(mesh);
+        group.updateMatrixWorld(true);
+        mesh.position.y = group.position.y - new THREE.Box3().setFromObject(mesh).min.y + 0.02;
+      })
+      .catch((err) => console.warn(`[found] could not load ${obj.id}:`, err));
+  }
+
+  private onKey(code: string): void {
+    if (this.placing) {
+      if (code === "KeyE") this.confirmPlacement();
+      else if (code === "KeyR") this.rollPlacement();
+      else if (code === "Escape") this.cancelPlacement();
+      return;
+    }
+    if (code === "KeyE" && this.target) {
+      if (this.target.kind === "loose") this.startPlacement(this.target.entry, this.target.obj);
+      else this.events.onInteract(this.target);
+    }
+    if (code === "KeyX" && this.mode === "body") this.events.send({ type: "drop", at: this.at() });
+  }
+
+  private at(): [number, number, number] {
+    const p = this.player.position;
+    return [Math.round(p.x * 100) / 100, 0, Math.round(p.z * 100) / 100];
+  }
+
+  private placingPrompt(): void {
+    const pl = this.placing!;
+    this.events.onPrompt(`${pl.core ? "inhabit" : "attach"} the ${pl.obj.name} · R move · wheel size · Esc cancel`);
+  }
+
+  private startPlacement(entry: LooseObject, obj: FoundObject): void {
+    if (this.mode === "legacy") return this.events.send({ type: "pickup", objectId: obj.id, position: [0, 0, 0], rotation: [0, 0, 0], scale: 1, at: this.at() });
+    const core = this.mode === "wisp";
+    const pl: Placing = { entry, obj, core, mesh: null, scale: 1, rotY: 0, anchor: new THREE.Vector3(), dir: new THREE.Vector3(0, 0, 1) };
+    this.placing = pl;
+    this.loose.get(entry.objectId)!.group.visible = false;
+    this.placingPrompt();
+    loadFound(obj, this.foundAssets, this.palette)
+      .then((mesh) => {
+        if (this.placing !== pl) return;
+        pl.mesh = mesh;
+        if (core) this.assembly.frame.clear();
+        this.assembly.frame.add(mesh);
+        if (core) this.layoutPlacement();
+        else this.rollPlacement();
+      })
+      .catch(() => this.cancelPlacement());
+  }
+
+  /** Picks a random point on the camera-facing side of the body (docs/09-found-bodies.md §1). */
+  private rollPlacement(): void {
+    const pl = this.placing;
+    if (!pl?.mesh || pl.core) return;
+    const frame = this.assembly.frame;
+    frame.updateMatrixWorld(true);
+    const others = this.assembly.meshes(pl.mesh);
+    const box = new THREE.Box3();
+    for (const o of others) box.expandByObject(o);
+    const centerW = box.isEmpty() ? frame.getWorldPosition(new THREE.Vector3()) : box.getCenter(new THREE.Vector3());
+    const center = frame.worldToLocal(centerW.clone());
+    const toCam = frame.worldToLocal(this.camera.position.clone()).sub(center).normalize();
+    const jitter = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(1.4);
+    const dir = toCam.add(jitter).normalize();
+    const originW = frame.localToWorld(center.clone().addScaledVector(dir, 10));
+    this.raycaster.set(originW, centerW.clone().sub(originW).normalize());
+    const hit = this.raycaster.intersectObjects(others, true)[0];
+    pl.anchor = hit ? frame.worldToLocal(hit.point.clone()) : center.clone().addScaledVector(dir, 0.4);
+    pl.dir = dir;
+    pl.rotY = Math.random() * Math.PI * 2;
+    this.layoutPlacement();
+  }
+
+  private layoutPlacement(): void {
+    const pl = this.placing;
+    if (!pl?.mesh) return;
+    const size = objectSize(pl.obj, pl.core ? "core" : "part");
+    const pos = pl.core ? new THREE.Vector3() : pl.anchor.clone().addScaledVector(pl.dir, size * pl.scale * 0.3);
+    placePart(pl.mesh, { position: pos.toArray() as [number, number, number], rotation: [0, pl.rotY, 0], scale: pl.scale }, size);
+    this.assembly.ground();
+  }
+
+  private confirmPlacement(): void {
+    const pl = this.placing;
+    if (!pl?.mesh) return;
+    const r = (n: number) => Math.round(n * 1000) / 1000;
+    const pos = pl.mesh.position.toArray().map(r) as [number, number, number];
+    this.events.send({ type: "pickup", objectId: pl.obj.id, position: pos, rotation: [0, r(pl.rotY), 0], scale: r(pl.scale), at: this.at() });
+    this.placing = null;
+    this.events.onPrompt(null);
+    this.target = null;
+  }
+
+  private cancelPlacement(): void {
+    const pl = this.placing;
+    if (!pl) return;
+    this.placing = null;
+    pl.mesh?.removeFromParent();
+    this.assembly.ground();
+    const l = this.loose.get(pl.entry.objectId);
+    if (l) {
+      l.group.visible = true;
+      if (!l.group.parent) this.scene.add(l.group);
+    }
+    this.events.onPrompt(null);
+    this.target = null;
   }
 
   private addInstance(inst: Instance, tier: number, night: boolean, windows: THREE.CanvasTexture | null): void {
@@ -444,7 +654,14 @@ export class SurfaceView implements View {
       }
     };
     for (const n of this.npcs) consider({ kind: "npc", npc: n.npc, label: `Talk to ${n.npc.name}` }, n.group.position.distanceTo(p), 2.6);
-    for (const it of this.data.interactables ?? []) {
+    for (const { entry, group } of this.loose.values()) {
+      const obj = this.objects.get(entry.objectId);
+      if (!obj || !group.visible) continue;
+      const label = `${this.mode === "wisp" ? "Inhabit" : "Attach"} ${obj.name} (${obj.tags.join(", ") || "plain"})`;
+      consider({ kind: "loose", entry, obj, label }, Math.hypot(group.position.x - p.x, group.position.z - p.z), 2);
+    }
+    // A wisp cannot work, trade or use things.
+    for (const it of this.mode === "wisp" ? [] : (this.data.interactables ?? [])) {
       const pos = this.instancePos(it.instanceId);
       const inst = this.data.instances.find((i) => i.id === it.instanceId);
       if (!pos || !inst) continue;
@@ -466,13 +683,15 @@ export class SurfaceView implements View {
     const f = (i.down("KeyW", "ArrowUp") ? 1 : 0) - (i.down("KeyS", "ArrowDown") ? 1 : 0);
     const s = (i.down("KeyD", "ArrowRight") ? 1 : 0) - (i.down("KeyA", "ArrowLeft") ? 1 : 0);
     if (i.down("KeyQ")) this.camYaw += dt * 1.8;
-    if (i.down("KeyR")) this.camYaw -= dt * 1.8;
+    if (i.down("KeyR") && !this.placing) this.camYaw -= dt * 1.8;
     const fwd = new THREE.Vector3(-Math.sin(this.camYaw), 0, -Math.cos(this.camYaw));
     const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
-    const move = fwd.multiplyScalar(f).add(right.multiplyScalar(s));
+    // Placement freezes movement so the attachment point stays where the camera put it.
+    const move = this.placing ? new THREE.Vector3() : fwd.multiplyScalar(f).add(right.multiplyScalar(s));
     const p = this.player.position;
+    const speed = this.mode === "wisp" ? WISP_SPEED : this.mode === "body" ? this.bodySpeed : PLAYER_SPEED;
     if (move.lengthSq() > 0) {
-      move.normalize().multiplyScalar(PLAYER_SPEED * (i.down("ShiftLeft", "ShiftRight") ? RUN : 1) * dt);
+      move.normalize().multiplyScalar(speed * (i.down("ShiftLeft", "ShiftRight") ? RUN : 1) * dt);
       p.add(move);
       this.player.rotation.y = Math.atan2(-move.x, -move.z);
       if (this.talkingTo) this.talkingTo = null;
@@ -488,6 +707,17 @@ export class SurfaceView implements View {
     p.x = Math.max(-HALF, Math.min(HALF, p.x));
     p.z = Math.max(-HALF, Math.min(HALF, p.z));
     p.y = this.height(p.x, p.z);
+    const moving = move.lengthSq() > 0;
+    if (this.mode === "wisp") {
+      this.hover = THREE.MathUtils.clamp(this.hover + ((i.down("Space") ? 1 : 0) - (i.down("KeyC") ? 1 : 0)) * dt * 2, 0.6, 4);
+      this.wisp.position.y = this.hover + Math.sin(this.time * 2.2) * 0.1;
+    } else if (this.mode === "body") {
+      // Hop-and-bob while moving, leaning into strafes (no skeleton, docs/09-found-bodies.md §2).
+      const root = this.assembly.root;
+      root.position.y = moving ? Math.abs(Math.sin(this.time * this.bodySpeed * 2.4)) * 0.14 : THREE.MathUtils.lerp(root.position.y, 0, dt * 10);
+      root.rotation.z = THREE.MathUtils.lerp(root.rotation.z, moving ? -s * 0.15 : 0, dt * 8);
+    }
+    for (const l of this.loose.values()) (l.ring.material as THREE.MeshBasicMaterial).opacity = 0.35 + Math.sin(this.time * 3 + l.entry.rotationY) * 0.15;
 
     // NPCs wander near home; whoever you talk to stops and faces you.
     for (const n of this.npcs) {
@@ -511,19 +741,22 @@ export class SurfaceView implements View {
     }
     for (const fl of this.flickers) fl.light.intensity = fl.base * (0.8 + Math.sin(this.time * 13 + fl.phase) * 0.1 + Math.sin(this.time * 7.3 + fl.phase) * 0.1);
 
-    const t = this.findTarget();
-    if (t?.label !== this.target?.label) this.events.onPrompt(t ? t.label : null);
-    this.target = t;
+    if (!this.placing) {
+      const t = this.findTarget();
+      if (t?.label !== this.target?.label) this.events.onPrompt(t ? t.label : null);
+      this.target = t;
+    }
 
-    const dist = 7;
+    const eye = this.mode === "wisp" ? this.hover : this.mode === "body" ? Math.max(0.8, this.assembly.height * 0.7) : 1.5;
+    const dist = (this.mode === "body" ? Math.max(7, this.assembly.height * 3.2) : 7) * controls.cameraDistance;
     const cam = new THREE.Vector3(
       p.x + Math.sin(this.camYaw) * Math.cos(this.camPitch) * dist,
-      p.y + 1.6 + Math.sin(this.camPitch) * dist,
+      p.y + eye + 0.1 + Math.sin(this.camPitch) * dist,
       p.z + Math.cos(this.camYaw) * Math.cos(this.camPitch) * dist,
     );
     cam.y = Math.max(cam.y, this.height(cam.x, cam.z) + 0.5);
     this.camera.position.lerp(cam, Math.min(1, dt * 10));
-    this.camera.lookAt(p.x, p.y + 1.5, p.z);
+    this.camera.lookAt(p.x, p.y + eye, p.z);
   }
 
   render(): void {
@@ -538,6 +771,7 @@ export class SurfaceView implements View {
   dispose(): void {
     this.disposed = true;
     this.input.dispose();
+    this.renderer.domElement.removeEventListener("wheel", this.onWheel);
     disposeScene(this.scene);
     this.events.onPrompt(null);
   }

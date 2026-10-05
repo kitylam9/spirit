@@ -1,10 +1,10 @@
 ---
 id: object-appraiser
-version: 1.0.0
+version: 1.1.0
 agent: Asset Scout (appraisal step)
 modelTier: fast
 temperature: 0.6
-outputSchema: array of found-object drafts (name, description, tags, suggestedSize, unsuitable); code adds id, assetRef and traits (schemas/found-object.schema.json)
+outputSchema: object with an `objects` array of found-object drafts (name, description, tags, suggestedSize, unsuitable); code adds id, assetRef and traits (schemas/found-object.schema.json)
 maxOutputTokens: 900 per batch of 12
 ---
 
@@ -43,7 +43,12 @@ Objects (source, title or file name, format, triangle estimate):
 ## Output
 
 ```json
-[
-  { "name": "...", "description": "...", "tags": ["..."], "suggestedSize": 0.6, "unsuitable": false }
-]
+{
+  "objects": [
+    { "name": "...", "description": "...", "tags": ["..."], "suggestedSize": 0.6, "unsuitable": false }
+  ]
+}
 ```
+
+Code adds `id`, `assetRef` and `traits`, and writes `schemaVersion` 1.1. Objects that could
+not be downloaded are never sent here; the server uses `procedural` shapes for them.

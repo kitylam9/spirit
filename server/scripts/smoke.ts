@@ -1,5 +1,5 @@
 /**
- * Headless end-to-end run of one life: new universe → approach → incarnate → actions →
+ * Headless end-to-end run of one life: new universe → approach → descend → found body → actions →
  * dialogue → death → reflection → new universe. Usage: `npx tsx server/scripts/smoke.ts`
  * (honors LLM_PROVIDER etc.; use LLM_PROVIDER=none for a fast procedural-only run).
  */
@@ -42,10 +42,21 @@ await session.handle({ type: "approach", planetId: target.id });
 const detail = await waitFor("planet.detail");
 lap(`planet ${detail.planet.name}: ${detail.planet.regions.map((r) => r.name).join(", ")} | civ ${detail.civilization.name}`);
 
-await session.handle({ type: "incarnate", planetId: target.id, mode: "arrive" });
+await session.handle({ type: "incarnate", planetId: target.id });
 const scene = await waitFor("scene");
-const state = await waitFor("state");
-lap(`scene "${scene.scene.name}" with ${scene.npcs.length} NPCs (${scene.npcs.map((n) => `${n.name}/${n.role}`).join(", ")}); I am ${state.player.incarnation?.vessel.name}`);
+lap(`scene "${scene.scene.name}" with ${scene.npcs.length} NPCs (${scene.npcs.map((n) => `${n.name}/${n.role}`).join(", ")}); wisp: ${!session.player.incarnation}`);
+
+// The first found object becomes the core, the next ones parts (docs/09-found-bodies.md).
+const found = await waitFor("found");
+lap(`found ${found.loose.length} objects: ${found.objects.map((o) => `${o.name} [${o.tags.join(",")}]${o.procedural ? " (procedural)" : ""}`).join("; ")}`);
+for (const [i, l] of found.loose.slice(0, 3).entries()) {
+  await session.handle({ type: "pickup", objectId: l.objectId, position: [i * 0.4, 0.5, 0], rotation: [0, 0, 0], scale: 1, at: l.position });
+}
+const body = session.player.incarnation?.body;
+const stats = (await waitFor("found")).body;
+lap(`I am ${session.player.incarnation?.vessel.name}: core + ${body?.parts.length} parts; body stats ${JSON.stringify(stats)}`);
+await session.handle({ type: "drop", at: [0, 0, 0] });
+lap(`dropped a part: ${session.player.incarnation?.body?.parts.length} parts left`);
 
 await session.handle({ type: "action", action: { verb: "work", params: { interactableId: "int-work" } } });
 await session.handle({ type: "action", action: { verb: "buy", params: { interactableId: "int-food-stall" } } });
@@ -72,6 +83,21 @@ lap(`death: ${death.report.causeOfDeath}; SE ${death.report.seDelta} → ${death
 await session.handle({ type: "reflect.continue" });
 const next = await waitFor("system");
 lap(`new universe "${next.system.name}" (${next.system.id}); planets: ${next.system.planets.map((p) => p.name).join(", ")}`);
+
+// Settings menu: change the descent cost, then restart from the planet.
+await waitFor("settings"); // the one sent with welcome
+await session.handle({ type: "settings.get" });
+const info = (await waitFor("settings")).info;
+await session.handle({ type: "settings.set", settings: { ...info.settings, gameplay: { ...info.settings.gameplay, descentCost: 7 } }, difficulty: "wanderer" });
+const applied = (await waitFor("settings")).info.settings.gameplay;
+const se = session.player.spirit.energy;
+await session.handle({ type: "incarnate", planetId: next.system.planets[0].id });
+lap(`settings: descentCost ${applied.descentCost}, difficulty ${session.player.difficulty}; SE ${se.toFixed(1)} → ${session.player.spirit.energy.toFixed(1)} after descending`);
+const lives = session.player.spirit.livesLived;
+await session.handle({ type: "restart" });
+const restarted = await waitFor("system");
+if (session.player.location.phase !== "space" || session.player.spirit.livesLived !== lives) throw new Error("restart did not keep lives or return to space");
+lap(`restart: new universe "${restarted.system.name}", phase ${session.player.location.phase}, lives ${session.player.spirit.livesLived}, SE ${session.player.spirit.energy.toFixed(1)}`);
 
 console.log("LLM:", llm.status());
 detach();

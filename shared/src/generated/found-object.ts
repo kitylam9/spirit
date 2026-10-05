@@ -1,17 +1,22 @@
 /* Generated from schemas/found-object.schema.json by shared/scripts/gen-types.mjs. Do not edit. */
 
-export type Trait = number;
-
 /**
  * A random Objaverse-XL object lying on a planet, appraised by the Asset Scout so the spirit can use it as a body part (docs/09-found-bodies.md). The LLM writes name, description, tags and unsuitable; code derives traits from tags.
  */
-export interface FoundObject {
-  schemaVersion: "1.0";
+export type FoundObject = {
+  schemaVersion: "1.1";
   id: string;
   /**
    * The ingested model (asset-manifest).
    */
-  assetRef: string;
+  assetRef?: string;
+  /**
+   * Offline fallback when no model could be downloaded: a simple shape built by the client.
+   */
+  procedural?: {
+    shape: "box" | "sphere" | "cylinder" | "cone" | "torus";
+    color: string;
+  };
   name: string;
   description: string;
   /**
@@ -55,4 +60,7 @@ export interface FoundObject {
    * Set by the appraiser for content outside the Teen rating; such objects are never spawned.
    */
   unsuitable?: boolean;
-}
+} & {
+  [k: string]: unknown;
+};
+export type Trait = number;

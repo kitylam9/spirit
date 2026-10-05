@@ -3,6 +3,7 @@ import { lookupQuery, rememberQuery } from "../assets/catalog.js";
 import type { ScoutRequest } from "../assets/match.js";
 import { findPolyHaven } from "../assets/polyhaven.js";
 import { findSketchfab, sketchfabEnabled } from "../assets/sketchfab.js";
+import { settings } from "../settings.js";
 
 /**
  * Asset Scout (docs/06-asset-pipeline.md). Deterministic for now: keyword ranking instead of an
@@ -10,10 +11,11 @@ import { findSketchfab, sketchfabEnabled } from "../assets/sketchfab.js";
  * CC-BY, only with SKETCHFAB_API_TOKEN). Returns null when nothing fits; the procedural
  * placeholder then stays.
  */
-const SOURCES: [string, (r: ScoutRequest) => Promise<AssetManifest | null>][] = [
+const SOURCES: ["polyhaven" | "sketchfab", (r: ScoutRequest) => Promise<AssetManifest | null>][] = [
   ["polyhaven", findPolyHaven],
   ["sketchfab", findSketchfab],
 ];
+const enabled = () => SOURCES.filter(([name]) => settings.assets[name]);
 const MAX_PARALLEL = 2;
 
 const inflight = new Map<string, Promise<AssetManifest | null>>();
@@ -42,7 +44,7 @@ export function scoutAsset(req: ScoutRequest): Promise<AssetManifest | null> {
   const key = `${req.query.trim().toLowerCase()}|${req.maxTriangles}`;
   const cached = lookupQuery(key);
   if (cached) return Promise.resolve(cached);
-  const missKey = `${key}|${sketchfabEnabled()}`;
+  const missKey = `${key}|${sketchfabEnabled()}|${enabled().map(([name]) => name)}`;
   if (misses.has(missKey)) return Promise.resolve(null);
   let p = inflight.get(key);
   if (!p) {
@@ -55,7 +57,7 @@ export function scoutAsset(req: ScoutRequest): Promise<AssetManifest | null> {
 async function search(req: ScoutRequest, key: string, missKey: string): Promise<AssetManifest | null> {
   const started = Date.now();
   for (const query of broaden(req.query)) {
-    for (const [name, find] of SOURCES) {
+    for (const [name, find] of enabled()) {
       // Poly Haven is contemporary or vintage: "sci-fi crate" must not broaden to a wooden "crate".
       if (name === "polyhaven" && query !== req.query && (req.tier === "T6" || req.tier === "T7")) continue;
       try {

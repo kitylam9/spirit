@@ -1,6 +1,7 @@
 # 09 — Found Bodies
 
-Status: **design, not yet built.** This replaces the *Born* and *Arrive* incarnation modes
+Status: **built (v0.2).** Where the build differs from the original design, the text below
+describes the build. This replaces the *Born* and *Arrive* incarnation modes
 (`01-game-design.md` §3) for new lives.
 
 The spirit lands on a planet as a point of light. Random real 3D objects lie scattered
@@ -23,7 +24,8 @@ flowchart LR
 1. **Descend.** Approaching a planet now offers a single action, *Descend* (5 SE). The
    player lands in one of the planet's scenes as a **wisp**.
 2. **Wisp.** The wisp flies freely (WASD, Space/C for up and down) a little above the
-   ground. It cannot talk, work or trade; NPCs only notice "a strange light". Spirit Energy
+   ground. It can travel between regions but cannot talk, work or trade, and NPCs ignore
+   it. Spirit Energy
    drains at 1 SE per real minute, twice the rate in space, so lingering bodiless is costly.
 3. **Loose objects** glow faintly on the ground. Pressing E near one starts **placement**:
    - The first object becomes the **core**; it is placed upright under the wisp.
@@ -32,8 +34,8 @@ flowchart LR
    - R re-rolls the point, the mouse wheel scales the object (0.5x to 2x), E confirms,
      Esc cancels and leaves the object where it was.
 4. **The life begins** when the core is placed: the rules engine creates the incarnation
-   (stats, goals, starting money), and the Narrative agent names the new being in the
-   civilization's naming style.
+   (stats, goals, starting money). The new being is named "<first name> the <core object>",
+   with the first name taken from the civilization's naming style (no extra LLM call).
 5. **Swap.** X drops the most recently added part back onto the ground; picking up another
    object adds it. A body holds the core plus at most **8 parts**.
 6. **Damage.** A single hit of 15+ health (failed bold choices, hostile NPCs, hazards)
@@ -91,21 +93,30 @@ one Parquet file per source with `fileIdentifier`, `source`, `license`, `fileTyp
 | --- | --- | --- | --- | --- |
 | Sketchfab | ~706,000 (CC-BY, CC0) | GLB | Objaverse mirror on Hugging Face (`allenai/objaverse` `glbs/`, located via `object-paths.json.gz`); no key | Sketchfab API `/v3/models/{uid}`: license slug `by` or `cc0`, not age-restricted |
 | Smithsonian | 2,407 (CC0) | GLB | Direct URL from the metadata | Smithsonian Open Access is CC0 |
-| GitHub | ~1,500 (CC0, CC-BY) | GLB, STL, OBJ (no textures) | `raw.githubusercontent.com` at the recorded commit | GitHub API repo license (optional `GITHUB_TOKEN` for rate limits) |
+| GitHub | ~15,800 (CC0, CC-BY; 13,764 + 2,023) | GLB, STL, OBJ (no textures) | `raw.githubusercontent.com` at the recorded commit | GitHub API repo license (optional `GITHUB_TOKEN` for rate limits) |
 | Thingiverse | ~2,250,000 (CC-BY, CC0, PD) | STL (no textures) | Thingiverse API, **only when `THINGIVERSE_TOKEN` is set** | Thingiverse API thing license |
 
 Rejected: `.blend`, `.fbx`, `.dae`, `.gltf` with external files, Polycam (non-commercial),
 anything with NC, ND or SA terms, missing licenses, and software licenses such as MIT.
 
-**Sampling.** The server never downloads the full metadata. It keeps a pool of about 300
-ready objects:
+**Sampling.** The server keeps a pool of about 24 ready objects, filled by 3 background
+workers and warmed when the spirit approaches a planet:
 
 1. Pick a source (weights: Sketchfab 0.6, Smithsonian 0.15, GitHub 0.15, Thingiverse 0.1
-   when enabled), then a random window of 1,000 rows, read with HTTP range requests.
-2. Keep rows with an allowed license and format.
-3. Re-check the license at the source, download (limit 15 MB), estimate triangles
-   (limit 50k) and register an `asset-manifest`.
+   when enabled), then a random object:
+   - Sketchfab: a random offset in the mirror's `object-paths.json.gz`.
+   - Smithsonian: a random row of its small Parquet file, downloaded once and cached.
+   - GitHub and Thingiverse: their Parquet files are a single row group, so random range
+     reads are not possible. A one-time CLI (`npm run objaverse:index -w server`, about
+     500 MB download) writes compact indexes of the usable rows to `DATA_DIR/objaverse/`.
+     Without an index, that source is skipped.
+2. Re-check the license at the source, download (limit 15 MB), count triangles
+   (limit 150k) and register an `asset-manifest` (`asset-ox-...`).
+3. GLB files may use Draco or meshopt compression (Smithsonian files are Draco); the client
+   loads the decoders. GLBs that need `KHR_texture_basisu` are rejected.
 4. Untextured formats get a material tinted from the planet palette.
+
+If the pool is empty after 20 seconds, objects ingested earlier are reused.
 
 **Names.** Sketchfab names come from the license-check API call. Smithsonian has titles.
 GitHub and Thingiverse only have file names, which the appraiser turns into a readable
@@ -118,14 +129,16 @@ LLM call** (`prompts/object-appraiser.md`) producing `found-object` records: nam
 description, tags, and an `unsuitable` flag. Flagged objects (adult, gore or hate content
 that slipped through, or anything that breaks the Teen rating) are discarded and replaced.
 Fallback without an LLM: the name is cleaned from the title or file name, and tags come
-from a keyword table.
+from a keyword table (only LLM appraisals are cached, in `DATA_DIR/found-objects.json`).
+If fewer than 6 objects are ready, procedural shapes (`found-object` 1.1 `procedural`)
+fill the scene so the player can always build a body offline.
 
 ## 6. Contract changes
 
 | Contract | Change |
 | --- | --- |
 | `player-state` 1.1 → 1.2 | `incarnation.mode` adds `assembled` (`born` and `arrive` stay valid for old saves); `vessel.kind` adds `assembled`; new `incarnation.body` |
-| `found-object` 1.0 (new) | An appraised object: asset reference, name, description, tags, traits |
+| `found-object` 1.1 (new) | An appraised object: asset reference or procedural shape, name, description, tags, traits |
 | `asset-manifest` 1.0 → 1.1 | `source.name` adds `github` and `thingiverse` |
 | Ids (`AGENTS.md`) | `obj-` for found objects, `part-` for attached parts |
 | Prompts | New `prompts/object-appraiser.md`; `prompts/npc.md` receives the body description |

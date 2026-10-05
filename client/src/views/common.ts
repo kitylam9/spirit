@@ -100,6 +100,18 @@ export const isTyping = () => {
   return a instanceof HTMLInputElement || a instanceof HTMLTextAreaElement;
 };
 
+/** Look controls from the settings menu, saved in this browser. */
+export const controls = {
+  sensitivity: 1,
+  invertY: false,
+  cameraDistance: 1,
+  ...(JSON.parse(localStorage.getItem("spirit.controls") ?? "{}") as Partial<{ sensitivity: number; invertY: boolean; cameraDistance: number }>),
+};
+export const saveControls = () => localStorage.setItem("spirit.controls", JSON.stringify(controls));
+
+/** While the settings menu is open, views ignore game keys. */
+export const menu = { open: false };
+
 /** Keyboard and mouse-drag look input, scoped to one view. */
 export class Input {
   keys = new Set<string>();
@@ -111,7 +123,7 @@ export class Input {
   constructor(private canvas: HTMLElement, private onKey?: (code: string) => void) {
     this.on(window, "keydown", (e) => {
       const k = e as KeyboardEvent;
-      if (isTyping()) return;
+      if (isTyping() || menu.open) return;
       this.keys.add(k.code);
       if (!k.repeat) this.onKey?.(k.code);
     });
@@ -140,7 +152,7 @@ export class Input {
   }
 
   takeDrag(): [number, number] {
-    const d: [number, number] = [this.dragX, this.dragY];
+    const d: [number, number] = [this.dragX * controls.sensitivity, this.dragY * controls.sensitivity * (controls.invertY ? -1 : 1)];
     this.dragX = this.dragY = 0;
     return d;
   }

@@ -5,11 +5,22 @@
   "description": "A random Objaverse-XL object lying on a planet, appraised by the Asset Scout so the spirit can use it as a body part (docs/09-found-bodies.md). The LLM writes name, description, tags and unsuitable; code derives traits from tags.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "id", "assetRef", "name", "description", "tags", "traits"],
+  "required": ["schemaVersion", "id", "name", "description", "tags", "traits"],
+  "oneOf": [{ "required": ["assetRef"] }, { "required": ["procedural"] }],
   "properties": {
-    "schemaVersion": { "const": "1.0" },
+    "schemaVersion": { "const": "1.1" },
     "id": { "type": "string", "pattern": "^obj-[a-z0-9-]+$" },
     "assetRef": { "type": "string", "pattern": "^asset-[a-z0-9-]+$", "description": "The ingested model (asset-manifest)." },
+    "procedural": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shape", "color"],
+      "description": "Offline fallback when no model could be downloaded: a simple shape built by the client.",
+      "properties": {
+        "shape": { "type": "string", "enum": ["box", "sphere", "cylinder", "cone", "torus"] },
+        "color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }
+      }
+    },
     "name": { "type": "string", "minLength": 1, "maxLength": 40 },
     "description": { "type": "string", "maxLength": 160 },
     "tags": {

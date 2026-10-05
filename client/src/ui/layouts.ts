@@ -41,7 +41,7 @@ export function spaceHud(system: StarSystemSummary, lives: number, autopilotTo: 
   });
 }
 
-export function omen(p: PlanetSummary, energy: number, detailReady: boolean): UILayout {
+export function omen(p: PlanetSummary, energy: number, detailReady: boolean, cost: number): UILayout {
   const dangerWord = p.danger >= 7 ? "perilous" : p.danger >= 4 ? "uncertain" : "gentle";
   return layout(`ui-omen-${p.id.replace(/^planet-/, "")}`, "omen", "spirit", {
     type: "Panel",
@@ -50,14 +50,8 @@ export function omen(p: PlanetSummary, energy: number, detailReady: boolean): UI
       text(`${TIER_NAMES[p.tier]} civilization · ${dangerWord} world`, "whisper"),
       text(`“${p.omen}”`),
       text(detailReady ? "The world is ready to receive you." : "The world is still taking shape… (you can descend now; it finishes as you fall)", "whisper"),
-      {
-        type: "Stack",
-        props: { direction: "row", gap: 8 },
-        children: [
-          { type: "Button", props: { label: "Be born here (5 SE)", hotkey: "1", action: { verb: "incarnate.request", params: { planetId: p.id, mode: "born" } } } },
-          { type: "Button", props: { label: "Arrive as a stranger (10 SE)", hotkey: "2", color: energy > 10 ? "accent" : "muted", action: { verb: "incarnate.request", params: { planetId: p.id, mode: "arrive" } } } },
-        ],
-      },
+      text("You land as a wisp of light. Gather the objects lying around to build a body.", "whisper"),
+      { type: "Button", props: { label: `Descend (${cost} SE)`, hotkey: "1", color: energy > cost || !cost ? "accent" : "muted", action: { verb: "incarnate.request", params: { planetId: p.id } } } },
     ],
   });
 }

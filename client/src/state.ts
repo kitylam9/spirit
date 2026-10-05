@@ -1,4 +1,4 @@
-import type { AssetManifest, Civilization, LlmStatus, NPC, Planet, PlayerState, Scene, StarSystemSummary } from "@spirit/shared";
+import type { AssetManifest, Civilization, LlmStatus, NPC, Planet, PlayerState, Scene, ServerMessage, SettingsInfo, StarSystemSummary } from "@spirit/shared";
 
 export const TIER_NAMES: Record<string, string> = {
   T0: "Primordial",
@@ -21,7 +21,10 @@ export const state = {
   npcs: [] as NPC[],
   /** Models already ingested for the current scene. */
   assets: [] as AssetManifest[],
+  /** Loose objects of the current scene and the objects the body is made of. */
+  found: null as Extract<ServerMessage, { type: "found" }> | null,
   llm: null as LlmStatus | null,
+  settings: null as SettingsInfo | null,
 };
 
 function clock(tick: number): string {

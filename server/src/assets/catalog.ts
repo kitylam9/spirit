@@ -36,6 +36,10 @@ export function getManifest(id: string): AssetManifest | undefined {
   return m && !m.disabled ? m : undefined;
 }
 
+export function listManifests(idPrefix: string): AssetManifest[] {
+  return [...manifests.values()].filter((m) => !m.disabled && m.id.startsWith(idPrefix));
+}
+
 export function lookupQuery(key: string): AssetManifest | undefined {
   return queries[key] ? getManifest(queries[key]) : undefined;
 }

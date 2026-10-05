@@ -88,6 +88,16 @@ export class LLMGateway {
     );
   }
 
+  /** Re-reads `config.llm` (changed from the settings menu). Calls already running finish on the old provider. */
+  async reconfigure(): Promise<void> {
+    this.provider = createProvider();
+    this.semaphore = new Semaphore(config.llm.maxConcurrency);
+    this.online = false;
+    this.emit();
+    await this.init();
+    this.emit();
+  }
+
   status(): LlmStatus {
     return {
       provider: this.provider?.id ?? "none",
@@ -124,14 +134,15 @@ export class LLMGateway {
    * then use their procedural fallback.
    */
   async json<T>(req: JsonRequest): Promise<T | null> {
-    if (!this.provider) return null;
+    const provider = this.provider;
+    if (!provider) return null;
     if (!this.online) {
-      this.online = await this.provider.ping();
+      this.online = await provider.ping();
       if (!this.online) return null;
     }
 
     const key = createHash("sha256")
-      .update(JSON.stringify([this.provider.model, req.agent, req.system, req.user, req.schema]))
+      .update(JSON.stringify([provider.model, req.agent, req.system, req.user, req.schema]))
       .digest("hex");
     if (req.cache !== false && this.cache.has(key)) return this.cache.get(key) as T;
 
@@ -149,7 +160,7 @@ export class LLMGateway {
       this.emit();
       try {
         const text = await this.semaphore.run(() =>
-          this.provider!.complete({
+          provider.complete({
             messages,
             schema: req.schema,
             temperature: req.temperature ?? 0.8,
@@ -172,7 +183,7 @@ export class LLMGateway {
         // Rate limited (free tiers): retrying right away only burns quota; use the fallback.
         if (/^\S+ 429:/.test((err as Error).message)) break;
         if ((err as Error).name === "TimeoutError" || /fetch failed|ECONNREFUSED/.test(String(err))) {
-          this.online = await this.provider.ping();
+          this.online = await provider.ping();
           break;
         }
       }

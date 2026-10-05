@@ -9,12 +9,15 @@
     "typecheck": "tsc --noEmit",
     "llm:check": "tsx scripts/llm-check.ts",
     "smoke": "tsx scripts/smoke.ts",
+    "objaverse:index": "node --max-old-space-size=4096 --import tsx scripts/objaverse-index.ts",
     "validate:examples": "tsx scripts/validate-examples.ts"
   },
   "dependencies": {
     "@spirit/shared": "0.1.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
+    "hyparquet": "^1.31.2",
+    "hyparquet-compressors": "^1.1.2",
     "ws": "^8.18.0"
   },
   "devDependencies": {

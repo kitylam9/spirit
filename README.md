@@ -25,7 +25,7 @@ scene.
 | [docs/06-asset-pipeline.md](docs/06-asset-pipeline.md) | How free 3D models are discovered, licensed, optimized and placed |
 | [docs/07-safety-and-consistency.md](docs/07-safety-and-consistency.md) | Guardrails, canon memory, determinism, cost control |
 | [docs/08-roadmap.md](docs/08-roadmap.md) | Milestones from docs to playable game |
-| [docs/09-found-bodies.md](docs/09-found-bodies.md) | How the spirit builds a body from random Objaverse-XL objects (next milestone) |
+| [docs/09-found-bodies.md](docs/09-found-bodies.md) | How the spirit builds a body from random Objaverse-XL objects |
 
 Machine-readable contracts:
 
@@ -126,6 +126,22 @@ queries for houses, workplaces, stalls and landmarks.
 Models are cached in `server/data/assets/` and reused across scenes. Credits for every model
 in view are shown at the bottom left. A model that is not found keeps its placeholder.
 
+### Found bodies (Objaverse-XL)
+
+On a planet the spirit is a wisp that builds its body from random CC0/CC-BY objects
+([docs/09-found-bodies.md](docs/09-found-bodies.md)). Sketchfab and Smithsonian objects
+work out of the box. GitHub and Thingiverse objects need a one-time local index (about
+500 MB download):
+
+```bash
+npm run objaverse:index -w server
+```
+
+```ini
+GITHUB_TOKEN=...                 # optional, raises GitHub API rate limits for license checks
+THINGIVERSE_TOKEN=...            # required for Thingiverse objects
+```
+
 ### Checks
 
 ```bash
@@ -144,5 +160,8 @@ token counts so you can tell.
 
 | Where | Keys |
 | --- | --- |
-| Space | Drag to look · W/S fly · A/D strafe · Space/C up/down · Shift boost · click a world to drift there · 1 = be born, 2 = arrive |
+| Anywhere | Esc or the ⚙ button (bottom right) opens Settings: restart in a new universe, difficulty, look controls, AI provider/model, gameplay tuning, 3D model sources. Server settings last until the server restarts; `.env` stays the default |
+| Space | Drag to look · W/S fly · A/D strafe · Space/C up/down · Shift boost · click a world to drift there · 1 = descend (5 SE) |
+| Planet, as a wisp | W/A/S/D fly · Space/C up/down · E pick up a glowing object (the first one becomes the core) |
+| Placing a part | R re-roll the spot · mouse wheel scale · E confirm · Esc cancel · X drop the last part |
 | Planet | W/A/S/D walk · Shift run · drag or Q/R to turn the camera · E interact (talk, buy, work, rest, travel) · click food to eat · Esc leave a conversation |
