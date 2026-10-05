@@ -88,6 +88,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #02030a; col
 .loading::before { content: ""; position: absolute; left: 12px; top: 50%; width: 12px; height: 12px; margin-top: -6px; border-radius: 50%; border: 2px solid #b8a4ff; border-top-color: transparent; animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .llm-status { position: fixed; right: 12px; bottom: 8px; font-size: 11px; color: #8890b8; font-family: Consolas, monospace; }
+.credits { position: fixed; left: 12px; bottom: 2px; max-width: 55vw; font-size: 10px; color: #8890b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .llm-status .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; background: #666; }
 .llm-status .dot.on { background: #6ad18f; } .llm-status .dot.busy { background: #ffb547; animation: pulse 0.6s infinite alternate; }
 .prompt { position: fixed; bottom: 46%; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.6); border-radius: 6px; padding: 5px 12px; font-size: 14px; color: #fff; }

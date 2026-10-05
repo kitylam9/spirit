@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { Sky } from "three/examples/jsm/objects/Sky.js";
-import type { NPC, Scene } from "@spirit/shared";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import type { AssetManifest, NPC, Scene } from "@spirit/shared";
 import { exitTarget, npcSpawns } from "@spirit/shared";
 import { Input, disposeScene, fbm, makeLabel, rngFrom, valueNoise, type View } from "./common.js";
 
@@ -69,12 +70,18 @@ export class SurfaceView implements View {
   private camPitch = 0.35;
   private target: Target | null = null;
   private time = 0;
+  private loader = new GLTFLoader();
+  private models = new Map<string, Promise<THREE.Object3D>>();
+  /** Placeholder groups per instance id (several when the instance is scattered). */
+  private placed = new Map<string, THREE.Group[]>();
+  private disposed = false;
   talkingTo: string | null = null;
 
   constructor(
     private renderer: THREE.WebGLRenderer,
     private data: Scene,
     npcs: NPC[],
+    assets: AssetManifest[],
     start: [number, number, number] | undefined,
     private events: { onPrompt(text: string | null): void; onInteract(t: Target): void },
   ) {
@@ -157,6 +164,7 @@ export class SurfaceView implements View {
     const lit = tier >= 6 ? "#ff7ad9" : tier >= 5 ? "#bfefff" : "#ffd98a";
     const windows = tier >= 4 ? windowTexture(lit) : null;
     for (const inst of data.instances) this.addInstance(inst, tier, night, windows);
+    for (const m of assets) this.applyAsset(m, data.instances.filter((i) => i.assetRef === m.id).map((i) => i.id));
 
     // Exits: glowing rings with a beam.
     for (const exit of data.exits) {
@@ -362,6 +370,7 @@ export class SurfaceView implements View {
       });
       g.userData.instanceId = inst.id;
       this.scene.add(g);
+      this.placed.set(inst.id, [...(this.placed.get(inst.id) ?? []), g]);
       if (radius > 0) this.colliders.push({ x, z, r: radius * scale });
       if (n === 0 && /^inst-(building-[01]|food-stall|focal)$/.test(inst.id)) {
         const label = makeLabel({ title: inst.label ?? "" });
@@ -369,6 +378,52 @@ export class SurfaceView implements View {
         this.scene.add(label);
       }
     }
+  }
+
+  /**
+   * Swaps the placeholders of `instanceIds` for the model. It is scaled to the placeholder's
+   * height, with its footprint capped so buildings keep their spacing.
+   */
+  applyAsset(m: AssetManifest, instanceIds: string[]): void {
+    const url = m.files.primary.url;
+    let model = this.models.get(url);
+    if (!model) {
+      model = this.loader.loadAsync(url).then((gltf) => gltf.scene);
+      this.models.set(url, model);
+    }
+    model
+      .then((src) => {
+        if (this.disposed) return;
+        const box = new THREE.Box3().setFromObject(src);
+        const size = box.getSize(new THREE.Vector3()).max(new THREE.Vector3(1e-3, 1e-3, 1e-3));
+        const center = box.getCenter(new THREE.Vector3());
+        for (const id of instanceIds) {
+          const inst = this.data.instances.find((i) => i.id === id);
+          const [sx, sy, sz] = (inst?.procedural?.size ?? inst?.assetRequest?.expectedSize ?? [1, 1, 1]) as number[];
+          const footprint = Math.max(sx, sz) * 1.5 + 1;
+          const s = Math.min(sy / size.y, footprint / Math.max(size.x, size.z));
+          for (const g of this.placed.get(id) ?? []) {
+            // Model geometry is shared with the cached source; only placeholder meshes are disposed.
+            if (!g.userData.hasModel)
+              g.traverse((o) => {
+                const mesh = o as THREE.Mesh;
+                mesh.geometry?.dispose();
+                if (mesh.material) (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).forEach((mat) => mat.dispose());
+              });
+            g.userData.hasModel = true;
+            const copy = src.clone();
+            copy.position.set(-center.x, -box.min.y, -center.z);
+            const fitted = new THREE.Group().add(copy);
+            fitted.scale.setScalar(s);
+            fitted.traverse((o) => {
+              if ((o as THREE.Mesh).isMesh) o.castShadow = o.receiveShadow = true;
+            });
+            g.clear();
+            g.add(fitted);
+          }
+        }
+      })
+      .catch((err) => console.warn(`[assets] could not load ${m.id}:`, err));
   }
 
   private instancePos(id: string): THREE.Vector3 | null {
@@ -481,6 +536,7 @@ export class SurfaceView implements View {
   }
 
   dispose(): void {
+    this.disposed = true;
     this.input.dispose();
     disposeScene(this.scene);
     this.events.onPrompt(null);

@@ -1,4 +1,4 @@
-import type { Civilization, LlmStatus, NPC, Planet, PlayerState, Scene, StarSystemSummary } from "@spirit/shared";
+import type { AssetManifest, Civilization, LlmStatus, NPC, Planet, PlayerState, Scene, StarSystemSummary } from "@spirit/shared";
 
 export const TIER_NAMES: Record<string, string> = {
   T0: "Primordial",
@@ -19,6 +19,8 @@ export const state = {
   civ: null as Civilization | null,
   scene: null as Scene | null,
   npcs: [] as NPC[],
+  /** Models already ingested for the current scene. */
+  assets: [] as AssetManifest[],
   llm: null as LlmStatus | null,
 };
 

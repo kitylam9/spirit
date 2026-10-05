@@ -172,7 +172,25 @@ Client behavior:
 | Ingest job timeout | 120 s |
 | Max catalog size (dev) | 50 GB |
 
-## 10. Legal and safety notes
+## 10. v0.1 implementation status
+
+`server/src/agents/assetScout.ts` and `server/src/assets/` implement a reduced version of
+this pipeline:
+
+- **Sources:** Poly Haven (public API), then Sketchfab when `SKETCHFAB_API_TOKEN` is set.
+  The Sketchfab license is re-read from the model page before download.
+- **Ranking:** keyword matching instead of embeddings or an LLM pick, so it makes no model
+  calls. The head noun of the query must match. Poly Haven candidates must also be within 3×
+  of `expectedSize`, using their published real-world dimensions.
+- **Ingest:** download only, no conversion, LODs or KTX2. Poly Haven glTF uses 1k textures;
+  Sketchfab GLB is capped at 30 MB. The triangle limit comes from `assetRequest.maxTriangles`.
+- **Delivery:**
+  - The server serves files from `DATA_DIR/assets/<asset-id>/` at `/assets/...`.
+  - The `scene` message carries the manifests that are already resolved.
+  - An `asset` message announces each model as it becomes ready.
+  - The client fits each model to the placeholder's height and caps its footprint.
+
+## 11. Legal and safety notes
 
 - Never hotlink third-party files to clients; always serve ingested copies.
 - Respect each source's terms of service and API rate limits; use official APIs or

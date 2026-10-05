@@ -1,8 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Civilization, ClientMessage, GameEvent, LlmStatus, NPC, Planet, PlayerState, Scene, ServerMessage, UILayout } from "@spirit/shared";
+import type { AssetManifest, Civilization, ClientMessage, GameEvent, LlmStatus, NPC, Planet, PlayerState, Scene, ServerMessage, UILayout } from "@spirit/shared";
 import { exitTarget, npcSpawns } from "@spirit/shared";
 import { config } from "./config.js";
+import { scoutAsset } from "./agents/assetScout.js";
+import { getManifest } from "./assets/catalog.js";
 import { createCivilization } from "./agents/civilization.js";
 import { createEpitaph, createEvent, createGoal, type LifeGoal } from "./agents/narrative.js";
 import { npcReply, populateScene } from "./agents/npc.js";
@@ -165,7 +167,32 @@ export class Session {
   private sendScene(sceneId: string): void {
     const scene = this.world.scenes[sceneId];
     const npcs = npcSpawns(scene).map((s) => this.world.npcs[s.npcId!]).filter(Boolean);
-    this.send({ type: "scene", scene, npcs, ui: this.world.huds[scene.planetId] });
+    const assets = [...new Set(scene.instances.map((i) => i.assetRef).filter((id): id is string => !!id))].map(getManifest).filter((m): m is AssetManifest => !!m);
+    this.send({ type: "scene", scene, npcs, ui: this.world.huds[scene.planetId], assets });
+    this.resolveAssets(scene);
+  }
+
+  /** Asks the Asset Scout for every request without a usable model; the scene is already playable meanwhile. */
+  private resolveAssets(scene: Scene): void {
+    const byQuery = new Map<string, Scene["instances"]>();
+    for (const inst of scene.instances) {
+      if (!inst.assetRequest || (inst.assetRef && getManifest(inst.assetRef))) continue;
+      const key = `${inst.assetRequest.query}|${inst.assetRequest.maxTriangles}`;
+      byQuery.set(key, [...(byQuery.get(key) ?? []), inst]);
+    }
+    for (const [key, insts] of byQuery) {
+      const r = insts[0].assetRequest!;
+      this.once(`asset:${scene.id}:${key}`, () =>
+        scoutAsset({ query: r.query, expectedSize: r.expectedSize, maxTriangles: r.maxTriangles ?? 20000, tier: scene.tier, requestedBy: scene.id }),
+      )
+        .then((m) => {
+          if (!m) return;
+          for (const i of insts) i.assetRef = m.id;
+          this.send({ type: "asset", sceneId: scene.id, manifest: m, instanceIds: insts.map((i) => i.id) });
+          this.scheduleSave();
+        })
+        .catch((err) => console.warn(`[assets] ${scene.id} "${r.query}": ${(err as Error).message}`));
+    }
   }
 
   // ---------- generation (deduplicated) ----------

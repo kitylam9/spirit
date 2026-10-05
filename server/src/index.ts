@@ -1,7 +1,10 @@
+import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
+import { extname, resolve, sep } from "node:path";
 import { WebSocketServer, type WebSocket } from "ws";
 import type { ClientMessage, ServerMessage } from "@spirit/shared";
 import { config } from "./config.js";
+import { assetsDir } from "./assets/catalog.js";
 import { llm } from "./llm/gateway.js";
 import { Session } from "./session.js";
 
@@ -16,10 +19,42 @@ function getSession(playerId: string | undefined): Promise<Session> {
   return p;
 }
 
+const MIME: Record<string, string> = {
+  ".glb": "model/gltf-binary",
+  ".gltf": "model/gltf+json",
+  ".bin": "application/octet-stream",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+  ".webp": "image/webp",
+  ".ktx2": "image/ktx2",
+};
+
 const http = createServer((req, res) => {
   if (req.url === "/api/health") {
     res.writeHead(200, { "content-type": "application/json" });
     res.end(JSON.stringify({ ok: true, llm: llm.status() }));
+    return;
+  }
+  if (req.method === "GET" && req.url?.startsWith("/assets/")) {
+    let rel: string;
+    try {
+      rel = decodeURIComponent(new URL(req.url, "http://x").pathname.slice("/assets/".length));
+    } catch {
+      res.writeHead(400).end();
+      return;
+    }
+    const file = resolve(assetsDir, rel);
+    if (!file.startsWith(assetsDir + sep) || !existsSync(file) || !statSync(file).isFile()) {
+      res.writeHead(404).end();
+      return;
+    }
+    res.writeHead(200, {
+      "content-type": MIME[extname(file).toLowerCase()] ?? "application/octet-stream",
+      "access-control-allow-origin": "*",
+      "cache-control": "public, max-age=31536000, immutable",
+    });
+    createReadStream(file).pipe(res);
     return;
   }
   res.writeHead(404).end();

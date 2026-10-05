@@ -5,6 +5,7 @@ import type { NPC } from "./generated/entity-npc.js";
 import type { Event } from "./generated/event.js";
 import type { PlayerState } from "./generated/player-state.js";
 import type { UILayout } from "./generated/ui-layout.js";
+import type { AssetManifest } from "./generated/asset-manifest.js";
 
 export type Tier = Planet["tier"];
 /** Alias that avoids clashing with the DOM `Event` type in client code. */
@@ -112,7 +113,9 @@ export type ServerMessage =
   | { type: "system"; system: StarSystemSummary }
   | { type: "planet.summary"; planet: PlanetSummary }
   | { type: "planet.detail"; planet: Planet; civilization: Civilization }
-  | { type: "scene"; scene: Scene; npcs: NPC[]; ui: UILayout }
+  | { type: "scene"; scene: Scene; npcs: NPC[]; ui: UILayout; assets: AssetManifest[] }
+  /** A model for `instanceIds` finished ingesting; the client swaps out their placeholders. */
+  | { type: "asset"; sceneId: string; manifest: AssetManifest; instanceIds: string[] }
   | { type: "npc.say"; reply: DialogueReply }
   | { type: "event"; event: Event }
   | { type: "toast"; text: string; tone: "info" | "good" | "bad" | "mystic" }

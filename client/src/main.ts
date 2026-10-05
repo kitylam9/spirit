@@ -56,9 +56,10 @@ const loading = div("loading");
 const prompt = div("prompt");
 const llmStatus = div("llm-status");
 const offline = div("offline");
+const credits = div("credits");
 offline.textContent = "Connecting to the Spirit server…";
-loading.hidden = prompt.hidden = true;
-ui.append(toasts, loading, prompt, llmStatus, offline);
+loading.hidden = prompt.hidden = credits.hidden = true;
+ui.append(toasts, loading, prompt, llmStatus, credits, offline);
 
 function toast(text: string, tone = "info"): void {
   const el = div(`toast ${tone}`);
@@ -101,6 +102,7 @@ function renderSpaceHud(): void {
 function syncView(): void {
   const p = state.player;
   if (!p || !state.system) return;
+  renderCredits();
   const phase = p.location.phase;
   if (phase !== "reflection" && reflectionLayer.open) reflectionLayer.set(null);
   if (phase === "space" || phase === "descent") {
@@ -119,7 +121,7 @@ function syncView(): void {
     if (key !== viewKey) {
       omenLayer.set(null);
       const scene = state.scene;
-      setView(key, () => new SurfaceView(renderer, scene, state.npcs, p.location.position as [number, number, number] | undefined, { onPrompt, onInteract }));
+      setView(key, () => new SurfaceView(renderer, scene, state.npcs, state.assets, p.location.position as [number, number, number] | undefined, { onPrompt, onInteract }));
       hudLayer.set(planetHud);
     }
   }
@@ -255,10 +257,18 @@ function onMessage(m: ServerMessage): void {
     case "scene":
       state.scene = m.scene;
       state.npcs = m.npcs;
+      state.assets = m.assets;
       planetHud = m.ui;
       closeDialogue();
       viewKey = viewKey.startsWith("surface:") ? "" : viewKey;
       syncView();
+      break;
+    case "asset":
+      if (state.scene?.id !== m.sceneId) break;
+      for (const inst of state.scene.instances) if (m.instanceIds.includes(inst.id)) inst.assetRef = m.manifest.id;
+      if (!state.assets.some((a) => a.id === m.manifest.id)) state.assets.push(m.manifest);
+      if (view instanceof SurfaceView && viewKey === `surface:${m.sceneId}`) view.applyAsset(m.manifest, m.instanceIds);
+      renderCredits();
       break;
     case "npc.say":
       if (dialogue && dialogue.npc.id === m.reply.npcId) {
@@ -295,6 +305,13 @@ function onMessage(m: ServerMessage): void {
       break;
   }
   hudLayer.update();
+}
+
+/** CC-BY requires visible attribution; CC0 credits are shown too. */
+function renderCredits(): void {
+  const onSurface = state.player?.location.phase === "planet" && !!state.scene;
+  credits.hidden = !onSurface || !state.assets.length;
+  credits.textContent = credits.title = `3D models: ${state.assets.map((a) => a.license.attribution).join(" · ")}`;
 }
 
 function renderLlm(): void {

@@ -23,17 +23,58 @@ export function foodItemId(civ: Civilization): string {
   return `item-${slug(TIERS[civ.tier].food.name)}`;
 }
 
+/** 3D model search queries for the props whose look depends most on the culture. */
+interface ModelQueries {
+  house?: string;
+  workplace?: string;
+  stall?: string;
+  landmark?: string;
+}
+
 interface SceneDraft {
   name: string;
   description: string;
   ambientSounds: string[];
+  models?: ModelQueries;
 }
 
+const s = { type: "string" };
 const sceneDraftSchema = {
   type: "object",
-  required: ["name", "description", "ambientSounds"],
-  properties: { name: { type: "string" }, description: { type: "string" }, ambientSounds: { type: "array", maxItems: 3, items: { type: "string" } } },
+  required: ["name", "description", "ambientSounds", "models"],
+  properties: {
+    name: s,
+    description: s,
+    ambientSounds: { type: "array", maxItems: 3, items: s },
+    models: { type: "object", required: ["house", "workplace", "stall", "landmark"], properties: { house: s, workplace: s, stall: s, landmark: s } },
+  },
 };
+
+const ERA = ["prehistoric", "tribal", "medieval", "colonial", "victorian", "modern", "cyberpunk", "futuristic"];
+
+/** Template queries per tier, used when the LLM gives none (or an unusable one). */
+function fallbackQueries(tier: number, focal: string): Required<ModelQueries> {
+  return {
+    house: ["large boulder", "tribal hut", "medieval house", "colonial house", "victorian brick house", "modern apartment building", "cyberpunk building", "futuristic building"][tier],
+    workplace: ["berry bush", "hide tent", "medieval barn", "harbor warehouse", "brick factory", "office building", "sci-fi factory", "futuristic tower"][tier],
+    stall: tier === 0 ? "berry bush" : `${ERA[tier]} market stall`,
+    landmark: focal === "well" ? "stone well" : focal === "fire" ? "campfire" : `${ERA[tier]} ${focal}`,
+  };
+}
+
+/** Keeps a short plain-words query ("medieval timber house"), else the fallback. */
+function cleanQuery(q: unknown, fallback: string): string {
+  if (typeof q !== "string") return fallback;
+  const words = q.replace(/[^a-zA-Z -]/g, " ").trim().split(/\s+/).filter(Boolean);
+  return words.length >= 1 && words.length <= 5 ? words.join(" ").toLowerCase() : fallback;
+}
+
+const request = (query: string, expectedSize: Vec3, maxTriangles: number): NonNullable<Instance["assetRequest"]> => ({
+  query: clip(query, 120),
+  expectedSize,
+  style: "realistic",
+  maxTriangles,
+});
 
 function buildingSize(tier: number, rng: Rng): Vec3 {
   if (tier <= 1) return [rng.range(4, 6), rng.range(3, 4), rng.range(4, 6)];
@@ -55,6 +96,13 @@ function layout(planet: Planet, civ: Civilization, region: Region, sceneId: stri
   const pointLights: NonNullable<Scene["environment"]["lighting"]["pointLights"]> = [];
   const interactables: NonNullable<Scene["interactables"]> = [];
   const food = foodItemId(civ);
+  const fq = fallbackQueries(tier, t.focal);
+  const q: Required<ModelQueries> = {
+    house: cleanQuery(draft.models?.house, fq.house),
+    workplace: cleanQuery(draft.models?.workplace, fq.workplace),
+    stall: cleanQuery(draft.models?.stall, fq.stall),
+    landmark: cleanQuery(draft.models?.landmark, fq.landmark),
+  };
 
   // Focal point at the center.
   const focal: Record<typeof t.focal, Instance["procedural"]> = {
@@ -63,14 +111,14 @@ function layout(planet: Planet, civ: Civilization, region: Region, sceneId: stri
     statue: { kind: "box", size: [1.6, 4.5, 1.6], material: "stone" },
     kiosk: { kind: "box", size: [2.4, 3, 1.6], material: "neon", color: palette[2] ?? "#19d3ff" },
   };
-  instances.push({ id: "inst-focal", label: { well: "Well", fire: "Campfire", statue: "Monument", kiosk: "Public kiosk" }[t.focal], procedural: focal[t.focal], transform: { position: [0, 0, 0] }, placement: { snapToGround: true, collider: "box" } });
+  instances.push({ id: "inst-focal", label: { well: "Well", fire: "Campfire", statue: "Monument", kiosk: "Public kiosk" }[t.focal], assetRequest: request(q.landmark, focal[t.focal]!.size as Vec3, 50000), procedural: focal[t.focal], transform: { position: [0, 0, 0] }, placement: { snapToGround: true, collider: "box" } });
   interactables.push({ id: "int-focal", instanceId: "inst-focal", label: { well: "Drink from the well", fire: "Warm yourself", statue: "Rest at the monument", kiosk: "Use the kiosk" }[t.focal], verbs: ["use", "look"] });
   if (t.focal === "fire") pointLights.push({ position: [0, 1.5, 0], color: "#ff8a3a", intensity: 8, range: 14, flicker: true });
 
   // Food stall with a vendor.
-  instances.push({ id: "inst-food-stall", label: `${t.food.name} stall`, procedural: { kind: "stall", size: [3, 2.6, 2], material: tier >= 5 ? "metal" : "wood", color: palette[1] }, transform: { position: [7, 0, -3], rotationY: -Math.PI / 2 }, placement: { snapToGround: true, collider: "box" } });
+  instances.push({ id: "inst-food-stall", label: `${t.food.name} stall`, assetRequest: request(q.stall, [3, 2.6, 2], 30000), procedural: { kind: "stall", size: [3, 2.6, 2], material: tier >= 5 ? "metal" : "wood", color: palette[1] }, transform: { position: [7, 0, -3], rotationY: -Math.PI / 2 }, placement: { snapToGround: true, collider: "box" } });
   interactables.push({ id: "int-food-stall", instanceId: "inst-food-stall", label: `Buy ${t.food.name.toLowerCase()}`, verbs: ["buy", "look"], itemId: food });
-  instances.push({ id: "inst-crates", label: "Crates", procedural: { kind: "crate", size: [0.9, 0.9, 0.9], material: tier >= 5 ? "polymer" : "wood" }, transform: { position: [9.5, 0, -5] }, count: 5, scatterRadius: 2, placement: { snapToGround: true, collider: "box" } });
+  instances.push({ id: "inst-crates", label: "Crates", assetRequest: request(tier <= 4 ? "wooden crate" : tier === 5 ? "plastic crate" : "sci-fi crate", [0.9, 0.9, 0.9], 5000), procedural: { kind: "crate", size: [0.9, 0.9, 0.9], material: tier >= 5 ? "polymer" : "wood" }, transform: { position: [9.5, 0, -5] }, count: 5, scatterRadius: 2, placement: { snapToGround: true, collider: "box" } });
 
   // Exits on the edge, one per connection.
   const exits: Scene["exits"] = region.connections.map((c, i) => {
@@ -98,6 +146,7 @@ function layout(planet: Planet, civ: Civilization, region: Region, sceneId: stri
     instances.push({
       id,
       label: placed === 0 ? "Your shelter" : placed === 1 ? `The ${t.workplace}` : "House",
+      assetRequest: placed === 1 ? request(q.workplace, size, 60000) : request(q.house, size, 30000),
       procedural: { kind: "building-block", size, material: t.materials[placed % t.materials.length], color: placed === 0 ? palette[3] ?? palette[0] : undefined },
       transform: { position: [Math.cos(angle) * r, 0, Math.sin(angle) * r], rotationY: -angle + Math.PI / 2 },
       placement: { snapToGround: true, collider: "box" },
@@ -106,8 +155,8 @@ function layout(planet: Planet, civ: Civilization, region: Region, sceneId: stri
   }
   // T0 (no buildings) uses a den rock and a foraging tree as home/work.
   if (tier === 0) {
-    instances.push({ id: "inst-building-0", label: "Den", procedural: { kind: "rock", size: [5, 3, 5], material: "rock" }, transform: { position: [-18, 0, 12] }, placement: { snapToGround: true, collider: "convex" } });
-    instances.push({ id: "inst-building-1", label: "Berry thicket", procedural: { kind: "tree", size: [4, 4, 4], material: "leaves" }, transform: { position: [16, 0, 16] }, placement: { snapToGround: true, collider: "convex" } });
+    instances.push({ id: "inst-building-0", label: "Den", assetRequest: request(q.house, [5, 3, 5], 30000), procedural: { kind: "rock", size: [5, 3, 5], material: "rock" }, transform: { position: [-18, 0, 12] }, placement: { snapToGround: true, collider: "convex" } });
+    instances.push({ id: "inst-building-1", label: "Berry thicket", assetRequest: request(q.workplace, [4, 4, 4], 30000), procedural: { kind: "tree", size: [4, 4, 4], material: "leaves" }, transform: { position: [16, 0, 16] }, placement: { snapToGround: true, collider: "convex" } });
   }
   interactables.push({ id: "int-home", instanceId: "inst-building-0", label: tier === 0 ? "Sleep in the den" : "Rest at your shelter", verbs: ["rest", "look"] });
   interactables.push({ id: "int-work", instanceId: "inst-building-1", label: tier === 0 ? "Forage" : `Work at the ${t.workplace}`, verbs: ["work", "look"] });
@@ -118,8 +167,8 @@ function layout(planet: Planet, civ: Civilization, region: Region, sceneId: stri
   for (let c = 0; c < 3; c++) {
     const a = rng.range(0, Math.PI * 2);
     const pos: Vec3 = [Math.cos(a) * 38, 0, Math.sin(a) * 38];
-    if (trees > 0) instances.push({ id: `inst-trees-${c}`, label: "Trees", procedural: { kind: "tree", size: [4, 7, 4], material: region.biome === "tundra" ? "pine" : "leaves" }, transform: { position: pos }, count: Math.ceil(trees / 3), scatterRadius: 10, placement: { snapToGround: true, collider: "convex" } });
-    if (rocks > 0) instances.push({ id: `inst-rocks-${c}`, label: "Rocks", procedural: { kind: "rock", size: [2, 1.5, 2], material: region.biome === "crystal" ? "crystal" : "rock" }, transform: { position: [-pos[0], 0, -pos[2]] }, count: Math.ceil(rocks / 3), scatterRadius: 9, placement: { snapToGround: true, collider: "convex" } });
+    if (trees > 0) instances.push({ id: `inst-trees-${c}`, label: "Trees", assetRequest: request(region.biome === "tundra" || region.biome === "mountains" ? "pine tree" : region.biome === "jungle" ? "palm tree" : "tree", [4, 7, 4], 20000), procedural: { kind: "tree", size: [4, 7, 4], material: region.biome === "tundra" ? "pine" : "leaves" }, transform: { position: pos }, count: Math.ceil(trees / 3), scatterRadius: 10, placement: { snapToGround: true, collider: "convex" } });
+    if (rocks > 0) instances.push({ id: `inst-rocks-${c}`, label: "Rocks", assetRequest: request(region.biome === "crystal" ? "crystal" : "rock", [2, 1.5, 2], 10000), procedural: { kind: "rock", size: [2, 1.5, 2], material: region.biome === "crystal" ? "crystal" : "rock" }, transform: { position: [-pos[0], 0, -pos[2]] }, count: Math.ceil(rocks / 3), scatterRadius: 9, placement: { snapToGround: true, collider: "convex" } });
   }
 
   // Lamps for tier 3+ or night.
@@ -128,7 +177,7 @@ function layout(planet: Planet, civ: Civilization, region: Region, sceneId: stri
       const a = (i / 6) * Math.PI * 2;
       const pos: Vec3 = [Math.cos(a) * 12, 0, Math.sin(a) * 12];
       const color = tier >= 6 ? palette[(i % 2) + 1] ?? "#ff2e88" : tier >= 4 ? "#ffd27a" : "#ff9a3a";
-      instances.push({ id: `inst-lamp-${i}`, label: "Lamp", procedural: { kind: "lamp", size: [0.3, 3.5, 0.3], material: tier >= 4 ? "iron" : "wood", color }, transform: { position: pos }, placement: { snapToGround: true, collider: "box" } });
+      instances.push({ id: `inst-lamp-${i}`, label: "Lamp", assetRequest: request(tier <= 2 ? "torch" : tier === 3 ? "oil street lamp" : tier === 4 ? "victorian street lamp" : tier === 5 ? "street light" : "sci-fi lamp", [0.3, 3.5, 0.3], 8000), procedural: { kind: "lamp", size: [0.3, 3.5, 0.3], material: tier >= 4 ? "iron" : "wood", color }, transform: { position: pos }, placement: { snapToGround: true, collider: "box" } });
       pointLights.push({ position: [pos[0], 3.4, pos[2]], color, intensity: tier >= 6 ? 14 : 8, range: 14, flicker: tier < 4 });
     }
   }
@@ -171,7 +220,7 @@ function layout(planet: Planet, civ: Civilization, region: Region, sceneId: stri
       weather: planet.physical.atmosphere === "toxic" ? "acid-rain" : rng.pick(["clear", "clear", "cloudy", "fog"] as const),
       ambientAudio: clipList(draft.ambientSounds, 4, 40),
     },
-    budget: { maxTriangles: 250000, maxInstances: 400, maxNewAssets: 0 },
+    budget: { maxTriangles: 250000, maxInstances: 400, maxNewAssets: 8 },
     instances,
     spawnPoints: [
       { id: "spawn-center", position: [0, 0, 6], rotationY: Math.PI, purpose: "arrival" },
@@ -186,12 +235,14 @@ function layout(planet: Planet, civ: Civilization, region: Region, sceneId: stri
 export async function designScene(planet: Planet, civ: Civilization, region: Region, existingScenes: Set<string>): Promise<Scene> {
   const sceneId = `scene-${region.id.replace(/^region-/, "")}`;
   const fbDraft: SceneDraft = { name: region.name, description: region.description, ambientSounds: [] };
+  const t = TIERS[planet.tier];
   const draft = await llm.json<SceneDraft>({
     agent: "scene-designer",
     system: `You are the Scene Designer of "Spirit", a life-simulation game. You name places and write the atmosphere a player feels on arrival. Content rating: Teen.`,
     user:
       `Region "${region.name}" on planet "${planet.name}" (tier ${planet.tier}, ${TIERS[planet.tier].name}): ${region.description}\nFeatures: ${region.features.join(", ")}.\n` +
-      `Architecture: ${civ.aesthetic.architecture}\nGive the central gathering place a name (max 5 words), a 2-3 sentence arrival description (sights, sounds, smells, the mood of the people today), and up to 3 short ambient sound keywords.`,
+      `Architecture: ${civ.aesthetic.architecture}\nGive the central gathering place a name (max 5 words), a 2-3 sentence arrival description (sights, sounds, smells, the mood of the people today), and up to 3 short ambient sound keywords.\n` +
+      `Also give "models": search queries for a 3D model library, 2-4 plain English words each, a common object noun last (e.g. "medieval timber house", "stone market stall"). Keys: house (a typical home), workplace (the ${t.workplace}), stall (a ${t.food.name.toLowerCase()} stall), landmark (the central ${t.focal}).`,
     schema: sceneDraftSchema,
     temperature: 0.9,
     maxTokens: 500,

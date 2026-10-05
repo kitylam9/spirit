@@ -107,6 +107,24 @@ The `llamacpp` provider works for any OpenAI-compatible server: LM Studio
 (`LLM_PROVIDER=openai`, `LLM_API_KEY=...`). If a server rejects `json_schema`, use
 `LLM_JSON_MODE=object` or `off`; the schema is then included in the prompt.
 
+### 3D models
+
+Scenes appear with simple placeholder shapes. The Asset Scout then looks up a real model for
+each prop and swaps it in as soon as it is downloaded. The Scene Designer LLM writes the search
+queries for houses, workplaces, stalls and landmarks.
+
+- **Poly Haven** (CC0, no key): high-quality props such as crates, barrels and furniture.
+  Most of its trees and rocks are photoscans too heavy to scatter, so they are skipped.
+- **Sketchfab** (CC0 and CC-BY only): buildings, trees, lamps and sci-fi props. It needs a
+  free API token from https://sketchfab.com/settings/password:
+
+  ```ini
+  SKETCHFAB_API_TOKEN=...
+  ```
+
+Models are cached in `server/data/assets/` and reused across scenes. Credits for every model
+in view are shown at the bottom left. A model that is not found keeps its placeholder.
+
 ### Checks
 
 ```bash

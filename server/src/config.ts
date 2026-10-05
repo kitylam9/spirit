@@ -31,9 +31,17 @@ if (!(provider in defaults)) {
 
 const d = defaults[provider];
 
+const port = Number(env("PORT") ?? 8787);
+
 export const config = {
-  port: Number(env("PORT") ?? 8787),
+  port,
   dataDir: resolve(env("DATA_DIR") ?? resolve(process.cwd(), "data")),
+  /** Base URL clients use to fetch ingested assets (`/assets/...`). */
+  publicUrl: (env("PUBLIC_URL") ?? `http://localhost:${port}`).replace(/\/+$/, ""),
+  assets: {
+    /** Optional. Enables Sketchfab as a fallback source (https://sketchfab.com/settings/password). */
+    sketchfabToken: env("SKETCHFAB_API_TOKEN") ?? "",
+  },
   llm: {
     provider,
     baseUrl: (env("LLM_BASE_URL") ?? d.baseUrl).replace(/\/+$/, ""),
